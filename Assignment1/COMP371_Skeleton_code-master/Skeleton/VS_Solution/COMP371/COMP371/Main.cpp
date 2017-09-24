@@ -157,32 +157,57 @@ int main()
 	std::vector<glm::vec3> cube_normals;
 	std::vector<glm::vec2> cube_UVs;
 	loadOBJ("cube.obj", cube_vertices, cube_normals, cube_UVs); //read the vertices from the cube.obj file
-	//loadOBJ("pacman.obj", vertices, normals, UVs); //read the vertices from the pacman.obj file
+
+	std::vector<glm::vec3> pacman_vertices;
+	std::vector<glm::vec3> pacman_normals;
+	std::vector<glm::vec2> pacman_UVs;
+	loadOBJ("pacman.obj", pacman_vertices, pacman_normals, pacman_UVs); //read the vertices from the pacman.obj file
 	//loadOBJ("sphere.obj", vertices, normals, UVs); //read the vertices from the sphere.obj file
 
+	//cube VAO
 	GLuint cube_VAO, cube_VBO;
 	glGenVertexArrays(1, &cube_VAO);
 	glGenBuffers(1, &cube_VBO);
 	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
-	GLuint vertices_VBO, normals_VBO;
+	GLuint cube_vertices_VBO, cube_normals_VBO;
 
 	glGenVertexArrays(1, &cube_VAO);
-	glGenBuffers(1, &vertices_VBO);
+	//glGenBuffers(1, &cube_vertices_VBO);
 
 	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
 	glBindVertexArray(cube_VAO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, vertices_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_VBO);
 	glBufferData(GL_ARRAY_BUFFER, cube_vertices.size() * sizeof(glm::vec3), &cube_vertices.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
-	glGenBuffers(1, &normals_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, normals_VBO);
+	glGenBuffers(1, &cube_normals_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_normals_VBO);
 	glBufferData(GL_ARRAY_BUFFER, cube_normals.size() * sizeof(glm::vec3), &cube_normals.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(1);
 
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
+
+	//pacman VAO
+	GLuint pacman_VAO, pacman_VBO;
+	glGenVertexArrays(1, &pacman_VAO);
+	glGenBuffers(1, &pacman_VBO);
+	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+
+	glGenVertexArrays(1, &pacman_VAO);
+	glGenBuffers(1, &pacman_VBO);
+
+	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+	glBindVertexArray(pacman_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, pacman_VBO);
+	glBufferData(GL_ARRAY_BUFFER, pacman_vertices.size() * sizeof(glm::vec3), &pacman_vertices.front(), GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
@@ -216,6 +241,10 @@ int main()
 
 		glBindVertexArray(cube_VAO);
 		glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+		glBindVertexArray(0);
+
+		glBindVertexArray(pacman_VAO);
+		glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
 		glBindVertexArray(0);
 
 		// Swap the screen buffers
