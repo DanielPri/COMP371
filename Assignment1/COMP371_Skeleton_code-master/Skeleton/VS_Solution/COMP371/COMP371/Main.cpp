@@ -12,6 +12,7 @@
 #include "glm.hpp"
 #include "gtc/matrix_transform.hpp"
 #include "gtc/type_ptr.hpp"
+#include "grid.hpp"
 #include "objloader.hpp"  //include the object loader
 
 using namespace std;
@@ -26,7 +27,7 @@ glm::mat4 projection_matrix;
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(2.0f, 2.0f, -100.0f);
+const glm::vec3 eye(2.0f, 2.0f, -2.0f);
 
 
 // Is called whenever a key is pressed/released via GLFW
@@ -212,11 +213,34 @@ int main()
 
 	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
 
+	//grid VAO
+	GLuint grid_VAO, grid_VBO;
+	glGenVertexArrays(1, &grid_VAO);
+	glGenBuffers(1, &grid_VBO);
+	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+
+	glGenVertexArrays(1, &grid_VAO);
+	glGenBuffers(1, &grid_VBO);
+
+	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+	glBindVertexArray(grid_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, grid_VBO);
+	glBufferData(GL_ARRAY_BUFFER, grid_vertices.size() * sizeof(glm::vec3), &grid_vertices.front(), GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
+
 	triangle_scale = glm::vec3(1.0f);
 
 	GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection_matrix");
 	GLuint viewMatrixLoc = glGetUniformLocation(shaderProgram, "view_matrix");
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
+
+	// uncomment this call to draw in wireframe polygons.
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -243,8 +267,12 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 		glBindVertexArray(0);
 
-		glBindVertexArray(pacman_VAO);
-		glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
+		//glBindVertexArray(pacman_VAO);
+		//glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
+		//glBindVertexArray(0);
+
+		glBindVertexArray(grid_VAO);
+		glDrawArrays(GL_LINES, 0, grid_vertices.size());
 		glBindVertexArray(0);
 
 		// Swap the screen buffers
