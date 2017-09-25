@@ -205,24 +205,28 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	while (!glfwWindowShouldClose(window))
 	{
-		glfwPollEvents();
+		
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		//axis 1
 		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::translate(model_matrix, glm::vec3(2, 2, 0));
+		model_matrix = glm::translate(model_matrix, glm::vec3(2, 0, 0));
 		glUniformMatrix4fv(model_addr, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glDrawArrays(GL_LINES, 0, 6);
 
-		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::translate(model_matrix, glm::vec3(-2, -2, 0));
-		glUniformMatrix4fv(model_addr, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glDrawArrays(GL_LINES, 0, 6);
-
-
-		
+		//axis 2
+		for (int i = 0; i < 10; i++) {
+			model_matrix = glm::mat4(1.0f);
+			model_matrix = glm::translate(model_matrix, glm::vec3(i-5, i-5, 0));
+			model_matrix = glm::rotate(model_matrix, glm::radians((float)glfwGetTime() * 40), glm::vec3(0.0f, 1.0f, 0.0f));
+			glUniformMatrix4fv(model_addr, 1, GL_FALSE, glm::value_ptr(model_matrix));
+			glDrawArrays(GL_LINES, 0, 6);
+		}
+		//Camera
 		glUniformMatrix4fv(camera_addr, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(pers_addr, 1, GL_FALSE, glm::value_ptr(perspective));
 		
+		glfwPollEvents();
 		glfwSwapBuffers(window);
 
 	}

@@ -27,13 +27,46 @@ glm::mat4 projection_matrix;
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(0.0f, 0.0f, -1.5f);
+const glm::vec3 eye(0.0f, 0.0f, 1.8f);
 
+//variables for key callbacks
+float object_size = 1;
+float position_x = 0;
+float position_y = 0;
+
+//resize window function
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 // Is called whenever a key is pressed/released via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-	std::cout << key << std::endl;	
+	std::cout << key << std::endl;
+	
+	if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+	//RELEASE or PRESS
+	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	if (key == GLFW_KEY_U && action == GLFW_PRESS) {
+		object_size += 0.1;
+	}
+	if (key == GLFW_KEY_J && action == GLFW_PRESS) {
+		object_size -= 0.1;
+	}
+	if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+		position_y += 0.1;
+	}
+	if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+		position_y -= 0.1;
+	}
+	if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+		position_x -= 0.1;
+	}
+	if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+		position_x += 0.1;
+	}
 }
 
 // The MAIN function, from here we start the application and run the game loop
@@ -48,7 +81,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Load one cube", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Hey look it's the Pacman", nullptr, nullptr);
 	if (window == nullptr)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -75,6 +108,8 @@ int main()
 	glViewport(0, 0, width, height);
 
 	projection_matrix = glm::perspective(45.0f, (GLfloat)width / (GLfloat)height, 0.0f, 100.0f);
+	
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	// Build and compile our shader program
 	// Vertex shader
@@ -163,7 +198,11 @@ int main()
 	std::vector<glm::vec3> pacman_normals;
 	std::vector<glm::vec2> pacman_UVs;
 	loadOBJ("pacman.obj", pacman_vertices, pacman_normals, pacman_UVs); //read the vertices from the pacman.obj file
-	//loadOBJ("sphere.obj", vertices, normals, UVs); //read the vertices from the sphere.obj file
+	
+	std::vector<glm::vec3> sphere_vertices;
+	std::vector<glm::vec3> sphere_normals;
+	std::vector<glm::vec2> sphere_UVs;
+	loadOBJ("sphere.obj", sphere_vertices, sphere_normals, sphere_UVs); //read the vertices from the sphere.obj file
 
 	//cube VAO
 	GLuint cube_VAO, cube_VBO;
@@ -233,6 +272,27 @@ int main()
 
 	glBindVertexArray(0);
 
+	//sphere VAO
+	GLuint sphere_VAO, sphere_VBO;
+	glGenVertexArrays(1, &sphere_VAO);
+	glGenBuffers(1, &sphere_VBO);
+	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+
+	glGenVertexArrays(1, &sphere_VAO);
+	glGenBuffers(1, &sphere_VBO);
+
+	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+	glBindVertexArray(sphere_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, sphere_VBO);
+	glBufferData(GL_ARRAY_BUFFER, sphere_vertices.size() * sizeof(glm::vec3), &sphere_vertices.front(), GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
+
+
 	triangle_scale = glm::vec3(1.0f);
 
 	GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection_matrix");
@@ -240,7 +300,7 @@ int main()
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
 
 	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -263,17 +323,33 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection_matrix));
 
+		//draw pacman
 		glBindVertexArray(pacman_VAO);
 		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::scale(model_matrix, glm::vec3(0.01f,0.01f,0.01f));
+		model_matrix = glm::translate(model_matrix, glm::vec3(position_x, position_y, 0.0f));
+		model_matrix = glm::rotate(model_matrix, glm::radians(80.0f), glm::vec3(1.0f,0.0f,0.0f));
+		model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
+		model_matrix = glm::scale(model_matrix, glm::vec3(0.005f,0.005f,0.005f));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
 		glBindVertexArray(0);
 
+		//draw grid
 		glBindVertexArray(grid_VAO);
 		model_matrix = glm::mat4(1.0f);
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glDrawArrays(GL_LINES, 0, grid_vertices.size());
+		glBindVertexArray(0);
+
+		//draw sphere
+		glBindVertexArray(sphere_VAO);
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::translate(model_matrix, glm::vec3(0.5f, 0.5f, 0.0f));
+		model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
+		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+		glDrawArrays(GL_TRIANGLES, 0, sphere_vertices.size());
 		glBindVertexArray(0);
 
 		// Swap the screen buffers
@@ -283,4 +359,9 @@ int main()
 	// Terminate GLFW, clearing any resources allocated by GLFW.
 	glfwTerminate();
 	return 0;
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
 }

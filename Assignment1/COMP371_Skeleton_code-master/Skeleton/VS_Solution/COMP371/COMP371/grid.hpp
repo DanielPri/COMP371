@@ -100,4 +100,21 @@ std::vector<glm::vec3> grid_vertices = {
 	glm::vec3 (1.0f, -1.0f, 0.0f),
 };
 
+std::vector<glm::vec3> axis_vertices = {
+	glm::vec3 (0.0f, 0.0f, 0.0f),
+	glm::vec3 (0.5f, 0.0f, 0.0f),
+	glm::vec3 (0.0f, 0.0f, 0.0f),
+	glm::vec3 (0.0f, 0.5f, 0.0f),
+	glm::vec3 (0.0f, 0.0f, 0.0f),
+	glm::vec3 (0.0f, 0.0f, 0.5f),
+};
+
+std::vector<glm::vec3> axis_colors = {
+	glm::vec3(1.0f, 0.0f, 0.0f),
+	glm::vec3(1.0f, 0.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 0.0f, 1.0f),
+	glm::vec3(0.0f, 0.0f, 1.0f),
+};
 #endif // GRID_H_
