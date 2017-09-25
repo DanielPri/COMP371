@@ -24,6 +24,8 @@ glm::vec3 camera_position;
 glm::vec3 triangle_scale;
 glm::mat4 projection_matrix;
 
+const float PI = 3.141592653;
+
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
@@ -33,6 +35,7 @@ const glm::vec3 eye(0.0f, 0.0f, 1.8f);
 float object_size = 1;
 float position_x = 0;
 float position_y = 0;
+float orientation = 0;
 
 //resize window function
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -42,30 +45,37 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	std::cout << key << std::endl;
 	
-	if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_L && action != GLFW_RELEASE) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 	//RELEASE or PRESS
-	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_P && action != GLFW_RELEASE) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+	}
+	if (key == GLFW_KEY_T && action != GLFW_RELEASE) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
-	if (key == GLFW_KEY_U && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_U && action != GLFW_RELEASE) {
 		object_size += 0.1;
 	}
-	if (key == GLFW_KEY_J && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_J && action != GLFW_RELEASE) {
 		object_size -= 0.1;
 	}
-	if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_W && action != GLFW_RELEASE) {
 		position_y += 0.1;
+		orientation = 90;
 	}
-	if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_S && action != GLFW_RELEASE) {
 		position_y -= 0.1;
+		orientation = 270;
 	}
-	if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_A && action != GLFW_RELEASE) {
 		position_x -= 0.1;
+		orientation = 180;
 	}
-	if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+	if (key == GLFW_KEY_D && action != GLFW_RELEASE) {
 		position_x += 0.1;
+		orientation = 0;
 	}
 }
 
@@ -327,7 +337,9 @@ int main()
 		glBindVertexArray(pacman_VAO);
 		model_matrix = glm::mat4(1.0f);
 		model_matrix = glm::translate(model_matrix, glm::vec3(position_x, position_y, 0.0f));
-		model_matrix = glm::rotate(model_matrix, glm::radians(80.0f), glm::vec3(1.0f,0.0f,0.0f));
+		model_matrix = glm::rotate(model_matrix, glm::radians(orientation), glm::vec3(0.0f, 0.0f, 1.0f));
+		std::cout << orientation << std::endl;
+		model_matrix = glm::rotate(model_matrix, glm::radians(0.0f), glm::vec3(1.0f,0.0f,0.0f));
 		model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
 		model_matrix = glm::scale(model_matrix, glm::vec3(0.005f,0.005f,0.005f));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
@@ -359,9 +371,4 @@ int main()
 	// Terminate GLFW, clearing any resources allocated by GLFW.
 	glfwTerminate();
 	return 0;
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
 }
