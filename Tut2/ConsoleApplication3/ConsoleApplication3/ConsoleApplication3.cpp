@@ -205,19 +205,25 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	while (!glfwWindowShouldClose(window))
 	{
-		model_matrix *= glm::scale(glm::mat4(1.0f), glm::vec3(1.0001, 1.0001, 1.0001));
-		glUniformMatrix4fv(
-			model_addr, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glUniformMatrix4fv(
-			camera_addr, 1, GL_FALSE, glm::value_ptr(view_matrix));
-		glUniformMatrix4fv(
-			pers_addr, 1, GL_FALSE, glm::value_ptr(perspective));
-
-
 		glfwPollEvents();
-		glfwSwapBuffers(window);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::translate(model_matrix, glm::vec3(2, 2, 0));
+		glUniformMatrix4fv(model_addr, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glDrawArrays(GL_LINES, 0, 6);
+
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::translate(model_matrix, glm::vec3(-2, -2, 0));
+		glUniformMatrix4fv(model_addr, 1, GL_FALSE, glm::value_ptr(model_matrix));
+		glDrawArrays(GL_LINES, 0, 6);
+
+
+		
+		glUniformMatrix4fv(camera_addr, 1, GL_FALSE, glm::value_ptr(view_matrix));
+		glUniformMatrix4fv(pers_addr, 1, GL_FALSE, glm::value_ptr(perspective));
+		
+		glfwSwapBuffers(window);
 
 	}
 

@@ -27,7 +27,7 @@ glm::mat4 projection_matrix;
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(2.0f, 2.0f, -2.0f);
+const glm::vec3 eye(0.0f, 0.0f, -1.5f);
 
 
 // Is called whenever a key is pressed/released via GLFW
@@ -240,7 +240,7 @@ int main()
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
 
 	// uncomment this call to draw in wireframe polygons.
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -263,15 +263,16 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection_matrix));
 
-		glBindVertexArray(cube_VAO);
-		glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+		glBindVertexArray(pacman_VAO);
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::scale(model_matrix, glm::vec3(0.01f,0.01f,0.01f));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+		glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
 		glBindVertexArray(0);
 
-		//glBindVertexArray(pacman_VAO);
-		//glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
-		//glBindVertexArray(0);
-
 		glBindVertexArray(grid_VAO);
+		model_matrix = glm::mat4(1.0f);
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glDrawArrays(GL_LINES, 0, grid_vertices.size());
 		glBindVertexArray(0);
 
