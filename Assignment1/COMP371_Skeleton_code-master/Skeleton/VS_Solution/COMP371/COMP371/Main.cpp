@@ -41,6 +41,7 @@ float position_y = 0;
 float orientation = 0;
 float sphere_x[SPHERE_QTY];
 float sphere_y[SPHERE_QTY];
+bool draw_sphere[SPHERE_QTY];
 
 // Is called whenever a key is pressed/released via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -63,10 +64,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_J && action != GLFW_RELEASE) {
 		object_size -= 0.1;
 	}
+	//resets
 	if (key == GLFW_KEY_R && action != GLFW_RELEASE) {
+		object_size = 1;
 		generateSpheres = true;
 		position_x = 0;
 		position_y = 0;
+		for (int i = 0; i < SPHERE_QTY; i++) {
+			draw_sphere[i] = true;
+		}
 	}
 	if (key == GLFW_KEY_W && action != GLFW_RELEASE) {
 		position_y += 0.1;
@@ -229,6 +235,9 @@ int main()
 	std::vector<glm::vec2> sphere_UVs;
 	loadOBJ("sphere.obj", sphere_vertices, sphere_normals, sphere_UVs); //read the vertices from the sphere.obj file
 	srand(time(NULL));
+	for (int i = 0; i < SPHERE_QTY; i++) {
+		draw_sphere[i] = true;
+	}
 	
 	//cube VAO
 	GLuint cube_VAO, cube_VBO;
@@ -368,16 +377,22 @@ int main()
 			generateSpheres = false;
 		}
 		for (int index = 0; index < SPHERE_QTY; index++) {
-			glUniform1i(fillLoc, 2);
-			glBindVertexArray(sphere_VAO);
-			model_matrix = glm::mat4(1.0f);
-			model_matrix = glm::mat4(1.0f);
-			model_matrix = glm::translate(model_matrix, glm::vec3(sphere_x[index], sphere_y[index], 0.0f));
-			model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
-			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
-			glDrawArrays(GL_TRIANGLES, 0, sphere_vertices.size());
-			glBindVertexArray(0);
+			if ((position_x >= sphere_x[index] - 0.03 && position_x <= sphere_x[index] + 0.03) && (position_y >= sphere_y[index] - 0.03 && position_y <= sphere_y[index] + 0.03))
+			{	
+				draw_sphere[index] = false;
+			}
+			else if (draw_sphere[index]) {
+				glUniform1i(fillLoc, 2);
+				glBindVertexArray(sphere_VAO);
+				model_matrix = glm::mat4(1.0f);
+				model_matrix = glm::mat4(1.0f);
+				model_matrix = glm::translate(model_matrix, glm::vec3(sphere_x[index], sphere_y[index], 0.0f));
+				model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
+				model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+				glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+				glDrawArrays(GL_TRIANGLES, 0, sphere_vertices.size());
+				glBindVertexArray(0);
+			}
 		}
 
 		//draw pacman
