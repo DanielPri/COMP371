@@ -6,6 +6,7 @@
 #include "..\glew\glew.h"	// include GL Extension Wrangler
 #include "..\glfw\glfw3.h"	// include GLFW helper library
 #include <stdio.h>
+#include <time.h>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -25,6 +26,8 @@ glm::vec3 triangle_scale;
 glm::mat4 projection_matrix;
 
 const float PI = 3.141592653;
+const int SPHERE_QTY = 15;
+bool generateSpheres = true;
 
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
@@ -36,9 +39,8 @@ float object_size = 1;
 float position_x = 0;
 float position_y = 0;
 float orientation = 0;
-
-//resize window function
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+float sphere_x[SPHERE_QTY];
+float sphere_y[SPHERE_QTY];
 
 // Is called whenever a key is pressed/released via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -60,6 +62,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 	if (key == GLFW_KEY_J && action != GLFW_RELEASE) {
 		object_size -= 0.1;
+	}
+	if (key == GLFW_KEY_R && action != GLFW_RELEASE) {
+		generateSpheres = true;
+		position_x = 0;
+		position_y = 0;
 	}
 	if (key == GLFW_KEY_W && action != GLFW_RELEASE) {
 		position_y += 0.1;
@@ -126,8 +133,6 @@ int main()
 	glViewport(0, 0, width, height);
 
 	projection_matrix = glm::perspective(45.0f, (GLfloat)width / (GLfloat)height, 0.0f, 100.0f);
-	
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	// Build and compile our shader program
 	// Vertex shader
@@ -223,7 +228,8 @@ int main()
 	std::vector<glm::vec3> sphere_normals;
 	std::vector<glm::vec2> sphere_UVs;
 	loadOBJ("sphere.obj", sphere_vertices, sphere_normals, sphere_UVs); //read the vertices from the sphere.obj file
-
+	srand(time(NULL));
+	
 	//cube VAO
 	GLuint cube_VAO, cube_VBO;
 	glGenVertexArrays(1, &cube_VAO);
@@ -352,17 +358,27 @@ int main()
 		glDrawArrays(GL_LINES, 0, grid_vertices.size());
 		glBindVertexArray(0);
 
-		//draw sphere
-		glUniform1i(fillLoc, 2);
-		glBindVertexArray(sphere_VAO);
-		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::translate(model_matrix, glm::vec3(0.5f, 0.5f, 0.0f));
-		model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
-		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glDrawArrays(GL_TRIANGLES, 0, sphere_vertices.size());
-		glBindVertexArray(0);
+		//draw spheres
+		//generate spheres coordinates
+		if (generateSpheres) {
+			for (int index = 0; index < SPHERE_QTY; index++) {
+				sphere_x[index] = (float)(rand() % 21 - 10) / 10;
+				sphere_y[index] = (float)(rand() % 21 - 10) / 10;
+			}
+			generateSpheres = false;
+		}
+		for (int index = 0; index < SPHERE_QTY; index++) {
+			glUniform1i(fillLoc, 2);
+			glBindVertexArray(sphere_VAO);
+			model_matrix = glm::mat4(1.0f);
+			model_matrix = glm::mat4(1.0f);
+			model_matrix = glm::translate(model_matrix, glm::vec3(sphere_x[index], sphere_y[index], 0.0f));
+			model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
+			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+			glDrawArrays(GL_TRIANGLES, 0, sphere_vertices.size());
+			glBindVertexArray(0);
+		}
 
 		//draw pacman
 		glUniform1i(fillLoc, 0);
