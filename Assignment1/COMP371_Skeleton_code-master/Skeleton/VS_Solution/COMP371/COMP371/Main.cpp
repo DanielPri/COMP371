@@ -63,19 +63,27 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 	if (key == GLFW_KEY_W && action != GLFW_RELEASE) {
 		position_y += 0.1;
+		if (position_y >= 1.0) position_y = 1.0;
 		orientation = 90;
+		std::cout << position_x << ", " << position_y << std::endl;
 	}
 	if (key == GLFW_KEY_S && action != GLFW_RELEASE) {
 		position_y -= 0.1;
+		if (position_y <= -1.0) position_y = -1.0;
 		orientation = 270;
+		std::cout << position_x << ", " << position_y << std::endl;
 	}
 	if (key == GLFW_KEY_A && action != GLFW_RELEASE) {
 		position_x -= 0.1;
+		if (position_x <= -1.0) position_x = -1.0;
 		orientation = 180;
+		std::cout << position_x << ", " << position_y << std::endl;
 	}
 	if (key == GLFW_KEY_D && action != GLFW_RELEASE) {
 		position_x += 0.1;
+		if (position_x >= 1.0) position_x = 1.0;
 		orientation = 0;
+		std::cout << position_x << ", " << position_y << std::endl;
 	}
 }
 
@@ -199,6 +207,8 @@ int main()
 
 	glUseProgram(shaderProgram);
 
+
+
 	std::vector<glm::vec3> cube_vertices;
 	std::vector<glm::vec3> cube_normals;
 	std::vector<glm::vec2> cube_UVs;
@@ -302,13 +312,14 @@ int main()
 
 	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
 
-
+	//pretty much useless but came with skeleton code
 	triangle_scale = glm::vec3(1.0f);
 
+	//uniform declarations
 	GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection_matrix");
 	GLuint viewMatrixLoc = glGetUniformLocation(shaderProgram, "view_matrix");
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
-
+	GLuint fillLoc = glGetUniformLocation(shaderProgram, "fill");
 	// uncomment this call to draw in wireframe polygons.
 	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -333,20 +344,8 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection_matrix));
 
-		//draw pacman
-		glBindVertexArray(pacman_VAO);
-		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::translate(model_matrix, glm::vec3(position_x, position_y, 0.0f));
-		model_matrix = glm::rotate(model_matrix, glm::radians(orientation), glm::vec3(0.0f, 0.0f, 1.0f));
-		std::cout << orientation << std::endl;
-		model_matrix = glm::rotate(model_matrix, glm::radians(0.0f), glm::vec3(1.0f,0.0f,0.0f));
-		model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
-		model_matrix = glm::scale(model_matrix, glm::vec3(0.005f,0.005f,0.005f));
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
-		glBindVertexArray(0);
-
 		//draw grid
+		glUniform1i(fillLoc, 1);
 		glBindVertexArray(grid_VAO);
 		model_matrix = glm::mat4(1.0f);
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
@@ -354,6 +353,7 @@ int main()
 		glBindVertexArray(0);
 
 		//draw sphere
+		glUniform1i(fillLoc, 2);
 		glBindVertexArray(sphere_VAO);
 		model_matrix = glm::mat4(1.0f);
 		model_matrix = glm::mat4(1.0f);
@@ -363,6 +363,22 @@ int main()
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glDrawArrays(GL_TRIANGLES, 0, sphere_vertices.size());
 		glBindVertexArray(0);
+
+		//draw pacman
+		glUniform1i(fillLoc, 0);
+		glBindVertexArray(pacman_VAO);
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::translate(model_matrix, glm::vec3(position_x, position_y, 0.0f));
+		model_matrix = glm::rotate(model_matrix, glm::radians(orientation), glm::vec3(0.0f, 0.0f, 1.0f));
+		model_matrix = glm::rotate(model_matrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		//uncomment v for teacup, comment out ^
+		//model_matrix = glm::scale(model_matrix, glm::vec3(15.0f, 15.0f, 15.0f));
+		model_matrix = glm::scale(model_matrix, glm::vec3(object_size, object_size, object_size));
+		model_matrix = glm::scale(model_matrix, glm::vec3(0.005f, 0.005f, 0.005f));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+		glDrawArrays(GL_TRIANGLES, 0, pacman_vertices.size());
+		glBindVertexArray(0);
+
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);
