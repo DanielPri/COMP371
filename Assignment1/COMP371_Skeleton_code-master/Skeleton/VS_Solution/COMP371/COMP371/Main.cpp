@@ -32,7 +32,7 @@ bool generateSpheres = true;
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(0.0f, 0.0f, 1.8f);
+const glm::vec3 eye(0.0f, 0.0f, 1.9f);
 
 //variables for key callbacks
 float object_size = 1;
@@ -42,29 +42,33 @@ float orientation = 0;
 float sphere_x[SPHERE_QTY];
 float sphere_y[SPHERE_QTY];
 bool draw_sphere[SPHERE_QTY];
-
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 // Is called whenever a key is pressed/released via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	std::cout << key << std::endl;
 	
+	//Show line view
 	if (key == GLFW_KEY_L && action != GLFW_RELEASE) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
-	//RELEASE or PRESS
+	//show vertex view
 	if (key == GLFW_KEY_P && action != GLFW_RELEASE) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 	}
+	//show triangle view
 	if (key == GLFW_KEY_T && action != GLFW_RELEASE) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+	//Scale up
 	if (key == GLFW_KEY_U && action != GLFW_RELEASE) {
 		object_size += 0.1;
 	}
+	//scale down
 	if (key == GLFW_KEY_J && action != GLFW_RELEASE) {
 		object_size -= 0.1;
 	}
-	//resets
+	//resets everything (play again)
 	if (key == GLFW_KEY_R && action != GLFW_RELEASE) {
 		object_size = 1;
 		generateSpheres = true;
@@ -74,24 +78,28 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			draw_sphere[i] = true;
 		}
 	}
+	//move up (also face up, also cannot go past walls)
 	if (key == GLFW_KEY_W && action != GLFW_RELEASE) {
 		position_y += 0.1;
 		if (position_y >= 1.0) position_y = 1.0;
 		orientation = 90;
 		std::cout << position_x << ", " << position_y << std::endl;
 	}
+	//move down (also face down, also cannot go past walls)
 	if (key == GLFW_KEY_S && action != GLFW_RELEASE) {
 		position_y -= 0.1;
 		if (position_y <= -1.0) position_y = -1.0;
 		orientation = 270;
 		std::cout << position_x << ", " << position_y << std::endl;
 	}
+	//go left (also face left, also cannot go past walls)
 	if (key == GLFW_KEY_A && action != GLFW_RELEASE) {
 		position_x -= 0.1;
 		if (position_x <= -1.0) position_x = -1.0;
 		orientation = 180;
 		std::cout << position_x << ", " << position_y << std::endl;
 	}
+	//go right (also face right, also cannot go past walls)
 	if (key == GLFW_KEY_D && action != GLFW_RELEASE) {
 		position_x += 0.1;
 		if (position_x >= 1.0) position_x = 1.0;
@@ -121,6 +129,7 @@ int main()
 	}
 	glfwMakeContextCurrent(window);
 	// Set the required callback functions
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetKeyCallback(window, key_callback);
 
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
@@ -334,10 +343,9 @@ int main()
 	GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection_matrix");
 	GLuint viewMatrixLoc = glGetUniformLocation(shaderProgram, "view_matrix");
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
+	//used to fill color
 	GLuint fillLoc = glGetUniformLocation(shaderProgram, "fill");
-	// uncomment this call to draw in wireframe polygons.
-	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+	
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -349,12 +357,15 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		//set the camera
 		glm::mat4 view_matrix;
 		view_matrix = glm::lookAt(eye, center, up);
-
+		
+		//set up first empty model_matrix
 		glm::mat4 model_matrix;
 		model_matrix = glm::scale(model_matrix, triangle_scale);
 
+		//draw empty world
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection_matrix));
@@ -418,4 +429,11 @@ int main()
 	// Terminate GLFW, clearing any resources allocated by GLFW.
 	glfwTerminate();
 	return 0;
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+	//update projection matrix to new width and height
+	projection_matrix = glm::perspective(45.0f, (GLfloat)width / (GLfloat)height, 0.0f, 100.0f); 
 }
