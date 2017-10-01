@@ -450,8 +450,8 @@ int main()
 		//change the camera
 		view_matrix = glm::lookAt(v_p, v_p + v_d , up);
 		//rotate camera
-		view_matrix = glm::rotate(view_matrix, glm::radians(rotateX), glm::vec3(0.0f,1.0f,0.0f));
-		view_matrix = glm::rotate(view_matrix, glm::radians(rotateY), glm::vec3(1.0f, 0.0f, 0.0f));
+		view_matrix = glm::rotate(view_matrix, glm::radians(rotateX), glm::vec3(0.0f,0.0f,-1.0f));
+		view_matrix = glm::rotate(view_matrix, glm::radians(rotateY), glm::vec3(-1.0f, 0.0f, 0.0f));
 		
 		//set up first empty model_matrix
 		glm::mat4 model_matrix;
