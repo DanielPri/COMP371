@@ -30,24 +30,95 @@ const int SPHERE_QTY = 15;
 bool generateSpheres = true;
 
 // Constant vectors
-const glm::vec3 center(0.0f, 0.0f, 0.0f);
+const glm::vec3 center(0.0f, 0.0f, -1.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(0.0f, 0.0f, 1.9f);
+glm::vec3 eye(0.0f, 0.0f, 1.9f);
 
-//variables for key callbacks
+//global variables for important functions
+//for scaling
 float object_size = 1;
+//for pacman's position
 float position_x = 0;
 float position_y = 0;
+//pacman's orientation
 float orientation = 0;
+//sphere generation
 float sphere_x[SPHERE_QTY];
 float sphere_y[SPHERE_QTY];
+//wether or not to draw a sphere if it has been eaten
 bool draw_sphere[SPHERE_QTY];
+//for camera 
+glm::vec3 v_d = center;
+glm::vec3 v_p = eye;
+float rotateX = 0;
+float rotateY = 0;
+//for window resizing
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-// Is called whenever a key is pressed/released via GLFW
+
+//using learnopengl.com/#!Getting-started/Camera method for calculating mouse x and y offsets
+void cursor_cb(GLFWwindow* window, double xpos, double ypos) {
+
+	int pan = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+	int zoom = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+	int tilt = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE);
+
+	if (zoom == GLFW_PRESS) {
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		double xdiff = xpos - (width / 2);
+		double ydiff = ypos - (height / 2);
+		v_p += v_d*(float)ydiff*-0.005f*0.04f;
+		glfwSetCursorPos(window, width / 2, height / 2);
+	}
+
+	if (pan == GLFW_PRESS) {
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		double xdiff = xpos - (width / 2);
+		double ydiff = ypos - (height / 2);
+
+		glm::vec3 mod_v = glm::vec3(xdiff*0.005, 0, 0);
+		glm::vec4 mod_v4 = glm::vec4(mod_v, 1);
+		v_d = glm::normalize(v_d + glm::vec3(mod_v4 * 0.05f));
+		glfwSetCursorPos(window, width / 2, height / 2);
+	}
+
+	if (tilt == GLFW_PRESS) {
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		double xdiff = xpos - (width / 2);
+		double ydiff = ypos - (height / 2);
+
+		glm::vec3 mod_v = glm::vec3(0, ydiff*-0.005, 0);
+		glm::vec4 mod_v4 = glm::vec4(mod_v, 1);
+		v_d = glm::normalize(v_d + glm::vec3(mod_v4 * 0.05f));
+		glfwSetCursorPos(window, width / 2, height / 2);
+	}
+}
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	std::cout << key << std::endl;
 	
+	//rotate camera
+	if (key == GLFW_KEY_RIGHT && action != GLFW_RELEASE) {
+		
+		rotateX -= 0.5;
+	}
+	if (key == GLFW_KEY_LEFT && action != GLFW_RELEASE) {
+
+		rotateX += 0.5;
+	}
+	if (key == GLFW_KEY_UP && action != GLFW_RELEASE) {
+
+		rotateY -= 0.5;
+	}
+	if (key == GLFW_KEY_DOWN && action != GLFW_RELEASE) {
+
+		rotateY += 0.5;
+	}
 	//Show line view
 	if (key == GLFW_KEY_L && action != GLFW_RELEASE) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -106,7 +177,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		orientation = 0;
 		std::cout << position_x << ", " << position_y << std::endl;
 	}
+	//reset camera
+	if (key == GLFW_KEY_HOME && action == GLFW_PRESS) {
+		v_d = center;
+		v_p = eye;
+
+	}
 }
+
+
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -130,6 +209,7 @@ int main()
 	glfwMakeContextCurrent(window);
 	// Set the required callback functions
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, cursor_cb);
 	glfwSetKeyCallback(window, key_callback);
 
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
@@ -144,6 +224,9 @@ int main()
 	// Define the viewport dimensions
 	int width, height;
 	glfwGetFramebufferSize(window, &width, &height);
+	
+	//Capture mouse with glfw
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glViewport(0, 0, width, height);
 
@@ -346,6 +429,13 @@ int main()
 	//used to fill color
 	GLuint fillLoc = glGetUniformLocation(shaderProgram, "fill");
 	
+	//using deltaTime from learnopengl.com
+	float deltaTime = 0.0f;	// Time between current frame and last frame
+	float lastFrame = 0.0f; // Time of last frame
+
+	//initialize view
+	glm::mat4 view_matrix;
+	view_matrix = glm::lookAt(eye, center, up);
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -357,9 +447,11 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		//set the camera
-		glm::mat4 view_matrix;
-		view_matrix = glm::lookAt(eye, center, up);
+		//change the camera
+		view_matrix = glm::lookAt(v_p, v_p + v_d , up);
+		//rotate camera
+		view_matrix = glm::rotate(view_matrix, glm::radians(rotateX), glm::vec3(0.0f,1.0f,0.0f));
+		view_matrix = glm::rotate(view_matrix, glm::radians(rotateY), glm::vec3(1.0f, 0.0f, 0.0f));
 		
 		//set up first empty model_matrix
 		glm::mat4 model_matrix;
@@ -424,6 +516,11 @@ int main()
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);
+
+		//using deltaTime from learnopengl.com
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
 	}
 
 	// Terminate GLFW, clearing any resources allocated by GLFW.
