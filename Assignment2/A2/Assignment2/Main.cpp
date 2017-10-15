@@ -16,6 +16,7 @@
 #include "objloader.hpp"  //include the object loader
 
 using namespace std;
+using namespace cimg_library;
 
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -193,6 +194,10 @@ int main()
 	GLuint viewMatrixLoc = glGetUniformLocation(shaderProgram, "view_matrix");
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
 
+	//CImg stuff
+	CImg<unsigned char> image("depth.bmp");
+	CImgDisplay main_disp(image, "The image");
+	
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
