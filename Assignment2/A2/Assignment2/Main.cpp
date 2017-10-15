@@ -28,7 +28,7 @@ glm::mat4 projection_matrix;
 // Constant vectors
 const glm::vec3 center(0.0f, 0.0f, 0.0f);
 const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(0.0f, 0.0f, 3.0f);
+const glm::vec3 eye(100.0f, 150.0f, 300.0f);
 
 
 // Is called whenever a key is pressed/released via GLFW
@@ -48,7 +48,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Create a GLFWwindow object that we can use for GLFW's functions
+	// Create a GLFWwindow object that we can use for GLFW's  functions
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Load one cube", nullptr, nullptr);
 	if (window == nullptr)
 	{
@@ -155,49 +155,50 @@ int main()
 
 	glUseProgram(shaderProgram);
 
-	std::vector<glm::vec3> vertices;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec2> UVs;
-	loadOBJ("cube.obj", vertices, normals, UVs); //read the vertices from the cube.obj file
-
-	GLuint VAO, VBO,EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
-	GLuint vertices_VBO, normals_VBO;
-
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &vertices_VBO);
-
-	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertices_VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices.front(), GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(0);
-
-	glGenBuffers(1, &normals_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, normals_VBO);
-	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals.front(), GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
-
-	triangle_scale = glm::vec3(1.0f);
+	triangle_scale = glm::vec3(0.2f);
 
 	GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection_matrix");
 	GLuint viewMatrixLoc = glGetUniformLocation(shaderProgram, "view_matrix");
 	GLuint transformLoc = glGetUniformLocation(shaderProgram, "model_matrix");
 
-	//CImg stuff
-	CImg<unsigned char> image("depth.bmp");
-	CImgDisplay main_disp(image, "The image");
+	//---------------------CImg stuff-----------------------------------------------------------------
+	//load image
+	cout << "loading image" << endl;
+	CImg<float> image("depth.bmp");
+	//CImgDisplay main_disp(image, "2D image");
 	
+	vector<glm::vec3> all_vertices;
+	int x = 0, z= 0;
+
+	//cycle through every pixel
+	cout << "placing in vector" << endl;
+	for (CImg<float>::iterator it = image.begin(); it < image.end(); ++it) 
+	{
+		//place the image pixel value as the y value in the all_vertices vector to correspond as x,y,z values
+		all_vertices.emplace_back(glm::vec3(x++, *it, z));
+		if (x == image.width())
+		{
+			x = 0;
+			z++;
+		}
+	}
+	cout << "image processing complete" << endl;
+	//-----------------------------------------------------------------------------------------------
+
+	GLuint VAO_all_pixels, VBO_all_pixels;
+
+	glGenVertexArrays(1, &VAO_all_pixels);
+	glGenBuffers(1, &VBO_all_pixels);
+
+	glBindVertexArray(VAO_all_pixels);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_all_pixels);
+	glBufferData(GL_ARRAY_BUFFER, all_vertices.size() * sizeof(glm::vec3), &all_vertices.front(), GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
+
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -219,8 +220,8 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection_matrix));
 
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+		glBindVertexArray(VAO_all_pixels);
+		glDrawArrays(GL_LINES, 0, all_vertices.size());
 		glBindVertexArray(0);
 
 		// Swap the screen buffers
