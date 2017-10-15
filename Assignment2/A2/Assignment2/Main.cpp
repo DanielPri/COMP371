@@ -49,7 +49,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Create a GLFWwindow object that we can use for GLFW's  functions
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Load one cube", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Heightmap", nullptr, nullptr);
 	if (window == nullptr)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -176,6 +176,7 @@ int main()
 	{
 		//place the image pixel value as the y value in the all_vertices vector to correspond as x,y,z values
 		all_vertices.emplace_back(glm::vec3(x++, *it, z));
+		//cout << *it << endl;
 		if (x == image.width())
 		{
 			x = 0;
@@ -185,7 +186,7 @@ int main()
 	cout << "image processing complete" << endl;
 	//-----------------------------------------------------------------------------------------------
 
-	GLuint VAO_all_pixels, VBO_all_pixels;
+	GLuint VAO_all_pixels, VBO_all_pixels, VBO_all_colors;
 
 	glGenVertexArrays(1, &VAO_all_pixels);
 	glGenBuffers(1, &VBO_all_pixels);
@@ -195,6 +196,8 @@ int main()
 	glBufferData(GL_ARRAY_BUFFER, all_vertices.size() * sizeof(glm::vec3), &all_vertices.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
+
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glBindVertexArray(0);
