@@ -181,6 +181,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_HOME && action == GLFW_PRESS) {
 		v_d = center;
 		v_p = eye;
+		rotateY = 0;
+		rotateX = 0;
+
 
 	}
 }
