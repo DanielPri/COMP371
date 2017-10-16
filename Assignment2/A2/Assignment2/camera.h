@@ -18,7 +18,7 @@ enum Camera_Movement {
 const float YAW        = -90.0f;
 const float PITCH      =  0.0f;
 const float SPEED      =  25.0f;
-const float SENSITIVTY =  1.0f;
+const float SENSITIVTY =  0.2f;
 const float ZOOM       =  45.0f;
 
 
@@ -77,6 +77,8 @@ public:
             Position -= Right * velocity;
         if (direction == RIGHT)
             Position += Right * velocity;
+
+		std::cout << "Position(x,y,z): "<< Position.x << ", " << Position.y << ", " << Position.z << std::endl;
     }
 
     // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
@@ -87,6 +89,9 @@ public:
 
         Yaw   += xoffset;
         Pitch += yoffset;
+
+		std::cout << "Yaw: " << Yaw << std::endl;
+		std::cout << "Pitch: " << Pitch << std::endl;
 
         // Make sure that when pitch is out of bounds, screen doesn't get flipped
         if (constrainPitch)

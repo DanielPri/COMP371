@@ -193,19 +193,21 @@ int main()
 	CImg<float> image("depth.bmp");
 	//CImgDisplay main_disp(image, "2D image");
 	
-	vector<glm::vec3> all_vertices;
+	vector<vector<glm::vec3>> all_vertices;
 	int x = 0, z= 0;
 	const int image_width = image.width();
 	const int image_height = image.height();
 	//cycle through every pixel
 	cout << "placing in vector" << endl;
 
-	for (int i = 0; i < image_width; i++ ) 
+	for (int j = 0; j < image_height; j++ ) 
 	{
-		for (int j = 0; j < image_height; j++) 
+		vector<glm::vec3> temp_vector;
+		for (int i = 0; i < image_width; i++) 
 		{
-			all_vertices.emplace_back(glm::vec3(i, *image.data(i,j), j));
+			temp_vector.emplace_back(glm::vec3(i, *image.data(i, j), j));
 		}
+		all_vertices.emplace_back(std::move(temp_vector));
 	}
 
 	//create a vector of vertices for skipped vertices
@@ -218,7 +220,7 @@ int main()
 	{
 		if (stepHeight % stepSize == 0) {
 			if (i % stepSize == 0) {
-				skipped_vertices.emplace_back(all_vertices[i]);
+				//skipped_vertices.emplace_back(all_vertices[i]);
 				widthPoints++;
 			}
 		}
@@ -238,7 +240,7 @@ int main()
 
 	glBindVertexArray(VAO_all_pixels);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO_all_pixels);
-	glBufferData(GL_ARRAY_BUFFER, all_vertices.size() * sizeof(glm::vec3), &all_vertices.front(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, all_vertices.size() * sizeof(glm::vec3), &all_vertices.front().front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
