@@ -169,9 +169,11 @@ int main()
 	
 	vector<glm::vec3> all_vertices;
 	int x = 0, z= 0;
-
+	const int image_width = image.width();
+	const int image_height = image.height();
 	//cycle through every pixel
 	cout << "placing in vector" << endl;
+
 	for (CImg<float>::iterator it = image.begin(); it < image.end(); ++it) 
 	{
 		//place the image pixel value as the y value in the all_vertices vector to correspond as x,y,z values
@@ -183,11 +185,25 @@ int main()
 			z++;
 		}
 	}
+	//create a vector of vertices for skipped vertices
 	vector<glm::vec3> skipped_vertices;
-	int stepSize = 10;
-	for (int i = 0; i < all_vertices.size(); i+= stepSize) 
+	int stepSize = 5;
+	int stepHeight = 0;
+	//for debug
+	int widthPoints = 0;
+	for (int i = 0; i < all_vertices.size(); i++) 
 	{
-		skipped_vertices.emplace_back(all_vertices[i]);
+		if (stepHeight % stepSize == 0) {
+			if (i % stepSize == 0) {
+				skipped_vertices.emplace_back(all_vertices[i]);
+				widthPoints++;
+			}
+		}
+		if (i % image_width == 0) {
+			++stepHeight;
+			cout << widthPoints << endl;
+			widthPoints = 0;
+		}
 
 	}
 	cout << "image processing complete" << endl;
