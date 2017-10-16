@@ -183,17 +183,24 @@ int main()
 			z++;
 		}
 	}
+	vector<glm::vec3> skipped_vertices;
+	int stepSize = 10;
+	for (int i = 0; i < all_vertices.size(); i+= stepSize) 
+	{
+		skipped_vertices.emplace_back(all_vertices[i]);
+
+	}
 	cout << "image processing complete" << endl;
 	//-----------------------------------------------------------------------------------------------
 
-	GLuint VAO_all_pixels, VBO_all_pixels, VBO_all_colors;
+	GLuint VAO_all_pixels, VBO_all_pixels;
 
 	glGenVertexArrays(1, &VAO_all_pixels);
 	glGenBuffers(1, &VBO_all_pixels);
 
 	glBindVertexArray(VAO_all_pixels);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO_all_pixels);
-	glBufferData(GL_ARRAY_BUFFER, all_vertices.size() * sizeof(glm::vec3), &all_vertices.front(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, skipped_vertices.size() * sizeof(glm::vec3), &skipped_vertices.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
@@ -210,7 +217,7 @@ int main()
 
 		// Render
 		// Clear the colorbuffer
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glm::mat4 view_matrix;
@@ -224,7 +231,7 @@ int main()
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection_matrix));
 
 		glBindVertexArray(VAO_all_pixels);
-		glDrawArrays(GL_LINES, 0, all_vertices.size());
+		glDrawArrays(GL_POINTS, 0, all_vertices.size());
 		glBindVertexArray(0);
 
 		// Swap the screen buffers
