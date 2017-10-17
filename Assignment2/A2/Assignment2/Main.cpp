@@ -27,7 +27,7 @@ void processInput(GLFWwindow *window);
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
 
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(35.0f, 50.0f, 20.0f));
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -193,57 +193,99 @@ int main()
 	CImg<float> image("depth.bmp");
 	//CImgDisplay main_disp(image, "2D image");
 	
-	vector<glm::vec3> all_vertices;
+	vector<vector<glm::vec3>> all_vertices3d;
 	int x = 0, z= 0;
 	const int image_width = image.width();
 	const int image_height = image.height();
 	//cycle through every pixel
 	cout << "placing in vector" << endl;
-
-	for (int i = 0; i < image_width; i++ ) 
+	for (int j = 0; j < image_height; j++ ) 
 	{
-		for (int j = 0; j < image_height; j++) 
+		vector<glm::vec3> temp_row;
+		for (int i = 0; i < image_width; i++) 
 		{
-			all_vertices.emplace_back(glm::vec3(i, *image.data(i,j), j));
+			temp_row.emplace_back(glm::vec3(i, *image.data(i,j), j));
+		}
+		all_vertices3d.push_back(std::move(temp_row));
+	}
+	//flatten 3d matrix
+	vector<glm::vec3> all_vertices;
+	for (int i = 0; i < all_vertices3d.size(); i++)
+	{
+		for (int j = 0; j < all_vertices3d.front().size(); j++)
+		{
+			all_vertices.emplace_back(all_vertices3d.at(i).at(j));
 		}
 	}
 
-	//create a vector of vertices for skipped vertices
-	vector<glm::vec3> skipped_vertices;
-	int stepSize = 1;
-	int stepHeight = 0;
-	//for debug
-	int widthPoints = 0;
-	for (int i = 0; i < all_vertices.size(); i++) 
+	//create a vector of vectors of vertices for skipped vertices
+	int stepSize = 10;
+	vector<vector<glm::vec3>> skipped_vertices3d;
+	for (int j = 0; j < image_height; j++)
 	{
-		if (stepHeight % stepSize == 0) {
-			if (i % stepSize == 0) {
-				skipped_vertices.emplace_back(all_vertices[i]);
-				widthPoints++;
+		if (j % stepSize == 0) {
+			vector<glm::vec3> temp_skip;
+			for (int i = 0; i < image_width; i++)
+			{
+				if (i % stepSize == 0) 
+				{
+					temp_skip.emplace_back(all_vertices3d.at(j).at(i));
+				}
 			}
+			skipped_vertices3d.push_back(std::move(temp_skip));
 		}
-		if (i % image_width == 0) {
-			++stepHeight;
-			widthPoints = 0;
+	}
+	//flatten second 3d matrix for skipped matrix
+	vector<glm::vec3> skipped_vertices;
+	for (int i = 0; i < skipped_vertices3d.size(); i++)
+	{
+		for (int j = 0; j < skipped_vertices3d.front().size(); j++)
+		{
+			skipped_vertices.emplace_back(skipped_vertices3d.at(i).at(j));
 		}
-
 	}
 	cout << "image processing complete" << endl;
 	//-----------------------------------------------------------------------------------------------
-
-	GLuint VAO_all_pixels, VBO_all_pixels;
+	//EBO vertex creator
+	vector<int> EBO_indices;
+	int EBO_width = skipped_vertices3d.front().size();
+	int index = 0;
+	for (int i = 0; i < skipped_vertices3d.size(); i++) 
+	{
+		for (int j = 0; j < EBO_width; j++) 
+		{	
+			if ((j != EBO_width - 1) || (i != skipped_vertices3d.size() - 1))
+			{	
+				//triangle 1
+				EBO_indices.emplace_back(index);
+				EBO_indices.emplace_back(EBO_width + index);
+				EBO_indices.emplace_back(index + 1);
+				
+				//triangle 2
+				EBO_indices.emplace_back(index + 1);
+				EBO_indices.emplace_back(EBO_width + index);
+				EBO_indices.emplace_back(EBO_width + index + 1);
+			}
+			index++;
+		}
+	}
+	//-----------------------------------------------------------------------------------------------
+	GLuint VAO_all_pixels, VBO_all_pixels, EBO;
 
 	glGenVertexArrays(1, &VAO_all_pixels);
 	glGenBuffers(1, &VBO_all_pixels);
+	glGenBuffers(1, &EBO);
 
 	glBindVertexArray(VAO_all_pixels);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO_all_pixels);
-	glBufferData(GL_ARRAY_BUFFER, all_vertices.size() * sizeof(glm::vec3), &all_vertices.front(), GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(0);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_all_pixels);
+		glBufferData(GL_ARRAY_BUFFER, skipped_vertices.size() * sizeof(glm::vec3), &skipped_vertices.front(), GL_STATIC_DRAW);
 
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, EBO_indices.size() * sizeof(int), &EBO_indices.front(), GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(0);
 
 	glBindVertexArray(0);
 
@@ -262,7 +304,7 @@ int main()
 		
 		// Render
 		// Clear the colorbuffer
-		glClearColor(0.4f, 0.2f, 0.3f, 1.0f);
+		glClearColor(0.0f, 0.1f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 
@@ -280,7 +322,9 @@ int main()
 		model_matrix = glm::mat4(1.0f);
 		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glDrawArrays(GL_POINTS, 0, all_vertices.size());
+		glDrawElements(GL_TRIANGLES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
+		//glDrawElements(GL_LINES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
+		//glDrawElements(GL_TRIANGLES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 
 		// Swap the screen buffers
