@@ -24,6 +24,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width, vector<vector<int>> &index3d);
+vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
+vector <int> createEBO(vector<vector<int>> index3d);
+void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO);
 
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -220,80 +223,32 @@ int main()
 			all_vertices.emplace_back(all_vertices3d.at(i).at(j));
 		}
 	}
-
-	asdasdasd;
-	//create a vector of vectors of vertices for skipped vertices
-	//as well as a vector of indices
-	int stepSize = 1;
-	int counter = 0;
-	vector<vector<glm::vec3>> skipped_vertices3d;
-	vector<vector<int>> index3d;
-	for (int j = 0; j < image_height; j++)
-	{
-		if (j % stepSize == 0) {
-			vector<glm::vec3> temp_skip;
-			vector<int> temp_index;
-			for (int i = 0; i < image_width; i++)
-			{
-				if (i % stepSize == 0) 
-				{
-					temp_skip.emplace_back(all_vertices3d.at(j).at(i));
-					temp_index.emplace_back(counter);
-					counter++;
-				}
-			}
-			skipped_vertices3d.push_back(std::move(temp_skip));
-			index3d.emplace_back(std::move(temp_index));
-		}
-	}
-	//flatten second 3d matrix for skipped matrix
-	vector<glm::vec3> skipped_vertices;
-	for (int i = 0; i < skipped_vertices3d.size(); i++)
-	{
-		for (int j = 0; j < skipped_vertices3d.front().size(); j++)
-		{
-			skipped_vertices.emplace_back(skipped_vertices3d.at(i).at(j));
-		}
-	}
-	cout << "image processing complete" << endl;
-	//-----------------------------------------------------------------------------------------------
-	//EBO vertex creator
-	vector<int> EBO_indices;
-	for (int i = 0; i < index3d.size() - 1; i++) 
-	{
-		for (int j = 0; j < index3d.front().size() - 1; j++)
-		{
-			//triangle 1
-			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
-			EBO_indices.emplace_back(index3d.at(i).at(j));
-			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
-
-			//triangle 2
-			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
-			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
-			EBO_indices.emplace_back(index3d.at(i + 1).at(j + 1));
-		}
-	}
 	
-	//-----------------------------------------------------------------------------------------------
-	GLuint VAO_all_pixels, VBO_all_pixels, EBO;
+	//create vector to be used for EBO creation for full vector
+	vector<vector<int>> full_index3d;
+	//create vector to be used for EBO creation for step vector
+	vector<vector<int>> index3d;
+	cout << "please enter desired step size" << endl;
+	int step;
+	cin >> step;
+	//create the stepped vertices
+	vector<vector<glm::vec3>> skipped_vertices3d = calcStepVertices(1, all_vertices3d, image_height, image_width, index3d);
 
-	glGenVertexArrays(1, &VAO_all_pixels);
-	glGenBuffers(1, &VBO_all_pixels);
+	
+	//flatten second 3d matrix for skipped matrix
+	vector<glm::vec3> skipped_vertices = flatten(skipped_vertices3d);
+
+	//EBO vertex creator
+	vector<int> EBO_indices = createEBO(index3d);
+
+	cout << "image processing complete" << endl;
+	//--------------------------------------------------------------------------------------
+
+	GLuint VAO, VBO, EBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO_all_pixels);
-		
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_all_pixels);
-		glBufferData(GL_ARRAY_BUFFER, skipped_vertices.size() * sizeof(glm::vec3), &skipped_vertices.front(), GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, EBO_indices.size() * sizeof(int), &EBO_indices.front(), GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-		glEnableVertexAttribArray(0);
-
-	glBindVertexArray(0);
+	Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -324,7 +279,7 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-		glBindVertexArray(VAO_all_pixels);
+		glBindVertexArray(VAO);
 		model_matrix = glm::mat4(1.0f);
 		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
@@ -428,4 +383,56 @@ vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3
 		}
 	}
 	return skipped_vertices3d;
+}
+
+vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d) 
+{
+	vector<glm::vec3> new_vector;
+	for (int i = 0; i < vector3d.size(); i++)
+	{
+		for (int j = 0; j < vector3d.front().size(); j++)
+		{
+			new_vector.emplace_back(vector3d.at(i).at(j));
+		}
+	}
+	return new_vector;
+}
+
+//EBO vertex creator
+vector <int> createEBO(vector<vector<int>> index3d)
+{
+	vector<int> EBO_indices;
+	for (int i = 0; i < index3d.size() - 1; i++)
+	{
+		for (int j = 0; j < index3d.front().size() - 1; j++)
+		{
+			//triangle 1
+			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
+			EBO_indices.emplace_back(index3d.at(i).at(j));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
+
+			//triangle 2
+			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j + 1));
+		}
+	}
+	return EBO_indices;
+}
+
+void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO)
+{
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices.front(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, EBO_indices.size() * sizeof(int), &EBO_indices.front(), GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+	cout << "Elements buffered" << endl;
 }
