@@ -23,10 +23,13 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
+vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width, vector<vector<int>> &index3d);
 
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
 
+int objRenderMode = GL_POINTS;
+ 
 Camera camera(glm::vec3(35.0f, 50.0f, 20.0f));
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
@@ -218,21 +221,29 @@ int main()
 		}
 	}
 
+	asdasdasd;
 	//create a vector of vectors of vertices for skipped vertices
-	int stepSize = 10;
+	//as well as a vector of indices
+	int stepSize = 1;
+	int counter = 0;
 	vector<vector<glm::vec3>> skipped_vertices3d;
+	vector<vector<int>> index3d;
 	for (int j = 0; j < image_height; j++)
 	{
 		if (j % stepSize == 0) {
 			vector<glm::vec3> temp_skip;
+			vector<int> temp_index;
 			for (int i = 0; i < image_width; i++)
 			{
 				if (i % stepSize == 0) 
 				{
 					temp_skip.emplace_back(all_vertices3d.at(j).at(i));
+					temp_index.emplace_back(counter);
+					counter++;
 				}
 			}
 			skipped_vertices3d.push_back(std::move(temp_skip));
+			index3d.emplace_back(std::move(temp_index));
 		}
 	}
 	//flatten second 3d matrix for skipped matrix
@@ -248,27 +259,22 @@ int main()
 	//-----------------------------------------------------------------------------------------------
 	//EBO vertex creator
 	vector<int> EBO_indices;
-	int EBO_width = skipped_vertices3d.front().size();
-	int index = 0;
-	for (int i = 0; i < skipped_vertices3d.size(); i++) 
+	for (int i = 0; i < index3d.size() - 1; i++) 
 	{
-		for (int j = 0; j < EBO_width; j++) 
-		{	
-			if ((j != EBO_width - 1) || (i != skipped_vertices3d.size() - 1))
-			{	
-				//triangle 1
-				EBO_indices.emplace_back(index);
-				EBO_indices.emplace_back(EBO_width + index);
-				EBO_indices.emplace_back(index + 1);
-				
-				//triangle 2
-				EBO_indices.emplace_back(index + 1);
-				EBO_indices.emplace_back(EBO_width + index);
-				EBO_indices.emplace_back(EBO_width + index + 1);
-			}
-			index++;
+		for (int j = 0; j < index3d.front().size() - 1; j++)
+		{
+			//triangle 1
+			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
+			EBO_indices.emplace_back(index3d.at(i).at(j));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
+
+			//triangle 2
+			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j + 1));
 		}
 	}
+	
 	//-----------------------------------------------------------------------------------------------
 	GLuint VAO_all_pixels, VBO_all_pixels, EBO;
 
@@ -322,7 +328,7 @@ int main()
 		model_matrix = glm::mat4(1.0f);
 		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glDrawElements(GL_TRIANGLES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawElements(objRenderMode, EBO_indices.size(), GL_UNSIGNED_INT, 0);
 		//glDrawElements(GL_LINES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
 		//glDrawElements(GL_TRIANGLES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
@@ -349,6 +355,14 @@ void processInput(GLFWwindow *window)
 		camera.ProcessKeyboard(LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
+	
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+		objRenderMode = GL_POINTS;
+	if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+		objRenderMode = GL_LINES;
+	if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+		objRenderMode = GL_TRIANGLES;
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -386,4 +400,32 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	camera.ProcessMouseScroll(yoffset);
+}
+
+//create a vector of vectors of vertices for skipped vertices
+//as well as a vector of indices
+
+vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3>> all_vertices3d ,int image_height, int image_width, vector<vector<int>> &index3d) 
+{
+	int counter = 0;
+	vector<vector<glm::vec3>> skipped_vertices3d;
+	for (int j = 0; j < image_height; j++)
+	{
+		if (j % stepSize == 0) {
+			vector<glm::vec3> temp_skip;
+			vector<int> temp_index;
+			for (int i = 0; i < image_width; i++)
+			{
+				if (i % stepSize == 0)
+				{
+					temp_skip.emplace_back(all_vertices3d.at(j).at(i));
+					temp_index.emplace_back(counter);
+					counter++;
+				}
+			}
+			skipped_vertices3d.push_back(std::move(temp_skip));
+			index3d.emplace_back(std::move(temp_index));
+		}
+	}
+	return skipped_vertices3d;
 }
