@@ -11,7 +11,9 @@ enum Camera_Movement {
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT,
+	UP,
+	DOWN
 };
 
 // Default camera values
@@ -77,6 +79,10 @@ public:
             Position -= Right * velocity;
         if (direction == RIGHT)
             Position += Right * velocity;
+		if (direction == UP)
+			Position += Up * velocity;
+		if (direction == DOWN)
+			Position -= Up * velocity;
 
 		std::cout << "Position(x,y,z): "<< Position.x << ", " << Position.y << ", " << Position.z << std::endl;
     }
@@ -116,6 +122,15 @@ public:
         if (Zoom >= 45.0f)
             Zoom = 45.0f;
     }
+
+	void Reset()
+	{
+		Position = glm::vec3(35.0f, 50.0f, 20.0f);
+		Yaw = -180.0f;
+		Pitch = -70.0f;
+		updateCameraVectors();
+	}
+
 
 private:
     // Calculates the front vector from the Camera's (updated) Eular Angles

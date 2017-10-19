@@ -24,6 +24,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width, vector<vector<int>> &index3d);
+vector<vector<int>> calcIndex3d(vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width);
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
 vector <int> createEBO(vector<vector<int>> index3d);
 void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO);
@@ -37,6 +38,11 @@ Camera camera(glm::vec3(35.0f, 50.0f, 20.0f));
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
+
+//state control
+bool state2 = true;
+bool state3 = false;
+bool state4 = false;
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -204,7 +210,7 @@ int main()
 	const int image_width = image.width();
 	const int image_height = image.height();
 	//cycle through every pixel
-	cout << "placing in vector" << endl;
+	cout << "LOADING PLEASE WAIT" << endl;
 	for (int j = 0; j < image_height; j++ ) 
 	{
 		vector<glm::vec3> temp_row;
@@ -224,31 +230,40 @@ int main()
 		}
 	}
 	
+	//Create vertices for step 2------------------------------------------------------------------
 	//create vector to be used for EBO creation for full vector
-	vector<vector<int>> full_index3d;
-	//create vector to be used for EBO creation for step vector
-	vector<vector<int>> index3d;
+	vector<vector<int>> full_index3d = calcIndex3d(all_vertices3d,image_height,image_width);
+	vector<int> EBO_full_indices = createEBO(full_index3d);
+	//---------------------------------------------------------------------------------------------
+
+	//Create vertices for step 3 -------------------------------------------------------------------
 	cout << "please enter desired step size" << endl;
 	int step;
 	cin >> step;
+	vector<vector<int>> index3d;
 	//create the stepped vertices
-	vector<vector<glm::vec3>> skipped_vertices3d = calcStepVertices(1, all_vertices3d, image_height, image_width, index3d);
-
-	
+	vector<vector<glm::vec3>> skipped_vertices3d = calcStepVertices(step, all_vertices3d, image_height, image_width, index3d);
 	//flatten second 3d matrix for skipped matrix
 	vector<glm::vec3> skipped_vertices = flatten(skipped_vertices3d);
-
 	//EBO vertex creator
 	vector<int> EBO_indices = createEBO(index3d);
+	//-----------------------------------------------------------------------------------------------
 
 	cout << "image processing complete" << endl;
 	//--------------------------------------------------------------------------------------
 
-	GLuint VAO, VBO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO);
+	GLuint VAO[2], VBO[2], EBO[2];
+	glGenVertexArrays(1, &VAO[0]);
+	glGenVertexArrays(1, &VAO[1]);
+	glGenBuffers(1, &VBO[0]);
+	glGenBuffers(1, &VBO[1]);
+	glGenBuffers(1, &EBO[0]);
+	glGenBuffers(1, &EBO[1]);
+
+	//Vertices for step 2
+	Rebuffer(all_vertices, EBO_full_indices, VAO[0], VBO[0], EBO[0]);
+	//vertices for step 3
+	Rebuffer(skipped_vertices, EBO_indices, VAO[1], VBO[1], EBO[1]);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -279,14 +294,23 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-		glBindVertexArray(VAO);
-		model_matrix = glm::mat4(1.0f);
-		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
-		glDrawElements(objRenderMode, EBO_indices.size(), GL_UNSIGNED_INT, 0);
-		//glDrawElements(GL_LINES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
-		//glDrawElements(GL_TRIANGLES, EBO_indices.size(), GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
+		if (state2) {
+			glBindVertexArray(VAO[0]);
+			model_matrix = glm::mat4(1.0f);
+			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+			glDrawElements(objRenderMode, EBO_full_indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+
+		if (state3) {
+			glBindVertexArray(VAO[1]);
+			model_matrix = glm::mat4(1.0f);
+			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+			glDrawElements(objRenderMode, EBO_indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);
@@ -310,7 +334,22 @@ void processInput(GLFWwindow *window)
 		camera.ProcessKeyboard(LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+		camera.ProcessKeyboard(UP, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+		camera.ProcessKeyboard(DOWN, deltaTime);
 	
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS){
+		state2 = true;
+		state3 = false;
+		state4 = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS){
+		state2 = false;
+		state3 = true;
+		state4 = false;
+	}
+
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 		objRenderMode = GL_POINTS;
 	if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
@@ -318,6 +357,13 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
 		objRenderMode = GL_TRIANGLES;
 
+	if (glfwGetKey(window, GLFW_KEY_BACKSPACE) == GLFW_PRESS) {
+		objRenderMode = GL_POINTS;
+		state2 = true;
+		state3 = false;
+		state4 = false;
+		camera.Reset();
+	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -383,6 +429,23 @@ vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3
 		}
 	}
 	return skipped_vertices3d;
+}
+
+vector<vector<int>> calcIndex3d(vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width)
+{
+	int counter = 0;
+	vector<vector<int>> index3d;
+	for (int j = 0; j < image_height; j++)
+	{
+			vector<int> temp_index;
+			for (int i = 0; i < image_width; i++)
+			{
+					temp_index.emplace_back(counter);
+					counter++;
+			}
+			index3d.emplace_back(std::move(temp_index));
+	}
+	return index3d;
 }
 
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d) 
