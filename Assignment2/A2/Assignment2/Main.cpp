@@ -23,8 +23,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
-vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width, vector<vector<int>> &index3d);
-vector<vector<int>> calcIndex3d(vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width);
+vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, vector<vector<int>> &index3d);
+vector<vector<int>> calcIndex3d(int image_height, int image_width);
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
 vector <int> createEBO(vector<vector<int>> index3d);
 void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO);
@@ -243,7 +243,7 @@ int main()
 	
 	//Create vertices for step 2------------------------------------------------------------------
 	//create vector to be used for EBO creation for full vector
-	full_index3d = calcIndex3d(all_vertices3d,image_height,image_width);
+	full_index3d = calcIndex3d(image_height,image_width);
 	EBO_full_indices = createEBO(full_index3d);
 	//---------------------------------------------------------------------------------------------
 
@@ -252,7 +252,7 @@ int main()
 	cin >> step;
 	index3d;
 	//create the stepped vertices
-	skipped_vertices3d = calcStepVertices(step, all_vertices3d, image_height, image_width, index3d);
+	skipped_vertices3d = calcStepVertices(image_height, image_width, index3d);
 	//flatten second 3d matrix for skipped matrix
 	skipped_vertices = flatten(skipped_vertices3d);
 	//EBO vertex creator
@@ -379,7 +379,7 @@ void processInput(GLFWwindow *window)
 		skipped_vertices.clear();
 		skipped_vertices3d.clear();
 
-		skipped_vertices3d = calcStepVertices(step, all_vertices3d, all_vertices3d.size(), all_vertices3d.front().size(), index3d);
+		skipped_vertices3d = calcStepVertices(all_vertices3d.size(), all_vertices3d.front().size(), index3d);
 		skipped_vertices = flatten(skipped_vertices3d);
 		EBO_indices = createEBO(index3d);
 		Rebuffer(skipped_vertices, EBO_indices, VAO[1], VBO[1], EBO[1]);
@@ -426,18 +426,18 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 //create a vector of vectors of vertices for skipped vertices
 //as well as a vector of indices
 
-vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3>> all_vertices3d ,int image_height, int image_width, vector<vector<int>> &index3d) 
+vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, vector<vector<int>> &index3d) 
 {
 	int counter = 0;
 	vector<vector<glm::vec3>> skipped_vertices3d;
 	for (int j = 0; j < image_height; j++)
 	{
-		if (j % stepSize == 0) {
+		if (j % step == 0) {
 			vector<glm::vec3> temp_skip;
 			vector<int> temp_index;
 			for (int i = 0; i < image_width; i++)
 			{
-				if (i % stepSize == 0)
+				if (i % step == 0)
 				{
 					temp_skip.emplace_back(all_vertices3d.at(j).at(i));
 					temp_index.emplace_back(counter);
@@ -451,7 +451,7 @@ vector<vector<glm::vec3>> calcStepVertices(int stepSize, vector<vector<glm::vec3
 	return skipped_vertices3d;
 }
 
-vector<vector<int>> calcIndex3d(vector<vector<glm::vec3>> all_vertices3d, int image_height, int image_width)
+vector<vector<int>> calcIndex3d(int image_height, int image_width)
 {
 	int counter = 0;
 	vector<vector<int>> index3d;
