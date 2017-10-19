@@ -48,6 +48,18 @@ bool state4 = false;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
+//global variables
+vector<vector<glm::vec3>> all_vertices3d;
+vector<vector<glm::vec3>> skipped_vertices3d;
+vector<glm::vec3> skipped_vertices;
+vector<glm::vec3> all_vertices;
+vector<vector<int>> full_index3d;
+vector<vector<int>> index3d;
+vector<int> EBO_full_indices;
+vector<int> EBO_indices;
+GLuint VAO[2], VBO[2], EBO[2];
+int step;
+
 //old camera
 /*
 glm::vec3 camera_position;
@@ -205,7 +217,6 @@ int main()
 	CImg<float> image("depth.bmp");
 	//CImgDisplay main_disp(image, "2D image");
 	
-	vector<vector<glm::vec3>> all_vertices3d;
 	int x = 0, z= 0;
 	const int image_width = image.width();
 	const int image_height = image.height();
@@ -232,27 +243,25 @@ int main()
 	
 	//Create vertices for step 2------------------------------------------------------------------
 	//create vector to be used for EBO creation for full vector
-	vector<vector<int>> full_index3d = calcIndex3d(all_vertices3d,image_height,image_width);
-	vector<int> EBO_full_indices = createEBO(full_index3d);
+	full_index3d = calcIndex3d(all_vertices3d,image_height,image_width);
+	EBO_full_indices = createEBO(full_index3d);
 	//---------------------------------------------------------------------------------------------
 
 	//Create vertices for step 3 -------------------------------------------------------------------
 	cout << "please enter desired step size" << endl;
-	int step;
 	cin >> step;
-	vector<vector<int>> index3d;
+	index3d;
 	//create the stepped vertices
-	vector<vector<glm::vec3>> skipped_vertices3d = calcStepVertices(step, all_vertices3d, image_height, image_width, index3d);
+	skipped_vertices3d = calcStepVertices(step, all_vertices3d, image_height, image_width, index3d);
 	//flatten second 3d matrix for skipped matrix
-	vector<glm::vec3> skipped_vertices = flatten(skipped_vertices3d);
+	skipped_vertices = flatten(skipped_vertices3d);
 	//EBO vertex creator
-	vector<int> EBO_indices = createEBO(index3d);
+	EBO_indices = createEBO(index3d);
 	//-----------------------------------------------------------------------------------------------
 
 	cout << "image processing complete" << endl;
 	//--------------------------------------------------------------------------------------
 
-	GLuint VAO[2], VBO[2], EBO[2];
 	glGenVertexArrays(1, &VAO[0]);
 	glGenVertexArrays(1, &VAO[1]);
 	glGenBuffers(1, &VBO[0]);
@@ -363,6 +372,17 @@ void processInput(GLFWwindow *window)
 		state3 = false;
 		state4 = false;
 		camera.Reset();
+		cout << "please enter desired step size" << endl;
+		cin >> step;
+		EBO_indices.clear();
+		index3d.clear();
+		skipped_vertices.clear();
+		skipped_vertices3d.clear();
+
+		skipped_vertices3d = calcStepVertices(step, all_vertices3d, all_vertices3d.size(), all_vertices3d.front().size(), index3d);
+		skipped_vertices = flatten(skipped_vertices3d);
+		EBO_indices = createEBO(index3d);
+		Rebuffer(skipped_vertices, EBO_indices, VAO[1], VBO[1], EBO[1]);
 	}
 }
 
