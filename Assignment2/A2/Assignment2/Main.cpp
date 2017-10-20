@@ -291,7 +291,7 @@ int main()
 	//vertices for step 3
 	Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO, 1);
 	//vertices for step 4
-	Rebuffer(interpolatedX_vertices, EBO_indices, VAO, VBO, EBO,2);
+	Rebuffer(interpolatedX_vertices, EBO_interpolatedX_indices, VAO, VBO, EBO,2);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -547,7 +547,6 @@ void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO[],
 	glBindVertexArray(0);
 	cout << "Elements buffered" << endl;
 }
-
 
 ///calculate every point  to be interpolated on the x axis
 void interpolateX()
