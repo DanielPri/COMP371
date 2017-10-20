@@ -30,7 +30,7 @@ vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, ve
 vector<vector<int>> calcIndex3d(int image_height, int image_width);
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
 vector <int> createEBO(vector<vector<int>> index3d);
-void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO);
+void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO[], GLuint VBO[], GLuint EBO[], int i );
 glm::vec3 catmullRom(glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4, float u);
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -254,6 +254,15 @@ int main()
 	cout << "please enter desired step size for catmull-rom (between 0 and 1)" << endl;
 	cin >> u;
 
+	//TODO YOUR ERRORS WILL LEAD YOU HERE
+	//WHEN IT DOES, CHANGE TO 4
+	for (int i = 0; i < 3; i++)
+	{
+		glGenVertexArrays(1, &VAO[i]);
+		glGenBuffers(1, &VBO[i]);
+		glGenBuffers(1, &EBO[i]);
+	}
+
 	//Create vertices for step 2------------------------------------------------------------------
 	//create vector to be used for EBO creation for full vector
 	full_index3d = calcIndex3d(image_height,image_width);
@@ -261,7 +270,7 @@ int main()
 	//---------------------------------------------------------------------------------------------
 
 	//Create vertices for step 3 -------------------------------------------------------------------
-	index3d;
+	//index3d;
 	//create the stepped vertices
 	skipped_vertices3d = calcStepVertices(image_height, image_width, index3d);
 	//flatten second 3d matrix for skipped matrix
@@ -277,19 +286,12 @@ int main()
 	cout << "image processing complete" << endl;
 	//--------------------------------------------------------------------------------------
 
-	//TODO YOUR ERRORS WILL LEAD YOU HERE
-	//WHEN IT DOES, CHANGE TO 4
-	for (int i = 0; i < 3; i++)
-	{
-		glGenVertexArrays(1, &VAO[i]);
-		glGenBuffers(1, &VBO[i]);
-		glGenBuffers(1, &EBO[i]);
-	}
-
 	//Vertices for step 2
-	Rebuffer(all_vertices, EBO_full_indices, VAO[0], VBO[0], EBO[0]);
+	Rebuffer(all_vertices, EBO_full_indices, VAO, VBO, EBO,0);
 	//vertices for step 3
-	Rebuffer(skipped_vertices, EBO_indices, VAO[1], VBO[1], EBO[1]);
+	Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO, 1);
+	//vertices for step 4
+	Rebuffer(interpolatedX_vertices, EBO_indices, VAO, VBO, EBO,2);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -317,28 +319,25 @@ int main()
 		glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+		model_matrix = glm::mat4(1.0f);
+		model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+
 		if (state2) {
 			glBindVertexArray(VAO[0]);
-			model_matrix = glm::mat4(1.0f);
-			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 			glDrawElements(objRenderMode, EBO_full_indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
 
 		if (state3) {
 			glBindVertexArray(VAO[1]);
-			model_matrix = glm::mat4(1.0f);
-			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
 			glDrawElements(objRenderMode, EBO_indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
 		if (state4) {
 			glBindVertexArray(VAO[2]);
-			model_matrix = glm::mat4(1.0f);
-			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+			//glDrawArrays(objRenderMode, 0, interpolatedX_vertices.size());
+			cout << interpolatedX_vertices.size() << endl;
 			glDrawElements(objRenderMode, EBO_interpolatedX_indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
@@ -382,7 +381,7 @@ void processInput(GLFWwindow *window)
 		state3 = true;
 		state4 = false;
 	}
-	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
 		state2 = false;
 		state3 = false;
 		state4 = true;
@@ -411,7 +410,7 @@ void processInput(GLFWwindow *window)
 		skipped_vertices3d = calcStepVertices(all_vertices3d.size(), all_vertices3d.front().size(), index3d);
 		skipped_vertices = flatten(skipped_vertices3d);
 		EBO_indices = createEBO(index3d);
-		Rebuffer(skipped_vertices, EBO_indices, VAO[1], VBO[1], EBO[1]);
+		Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO, 1);
 	}
 }
 
@@ -532,14 +531,14 @@ vector <int> createEBO(vector<vector<int>> index3d)
 	return EBO_indices;
 }
 
-void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO)
+void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO[], GLuint VBO[], GLuint EBO[], int i)
 {
-	glBindVertexArray(VAO);
+	glBindVertexArray(VAO[i]);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[i]);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices.front(), GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[i]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, EBO_indices.size() * sizeof(int), &EBO_indices.front(), GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
@@ -549,27 +548,44 @@ void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, G
 	cout << "Elements buffered" << endl;
 }
 
-///calculate every point 
+
+///calculate every point  to be interpolated on the x axis
 void interpolateX()
 {
+	cout << skipped_vertices3d.front().size() << endl;
+	int counter = 0;
 	for (int i = 0; i < skipped_vertices3d.size(); i++) {
-
 		vector<glm::vec3> tempinter;
-		for (int j = 1; j < skipped_vertices3d.front().size() - 4; j++) {
-			if (j + 3 > skipped_vertices3d.front().size()) { cout << "ERROR: OUT OF VECTOR 559" << endl; }
-			for (float k = u; k < u; k += u)
+		vector<int> tempindex;
+		for (int j = 0; j < skipped_vertices3d.front().size() - 3; j++) {
+			tempinter.emplace_back(skipped_vertices3d.at(i).at(j));
+			tempindex.emplace_back(counter);
+			counter++;
+			for (float k = u; k < 1; k += u)
 			{
 				tempinter.emplace_back(catmullRom(skipped_vertices3d.at(i).at(j), skipped_vertices3d.at(i).at(j + 1), skipped_vertices3d.at(i).at(j + 2), skipped_vertices3d.at(i).at(j + 3), k));
+				tempindex.emplace_back(counter);
+				counter++;
+			}
+			if (j == skipped_vertices3d.front().size() - 4) {
+				tempinter.emplace_back(skipped_vertices3d.at(i).at(skipped_vertices3d.front().size() - 1));
+				tempinter.emplace_back(skipped_vertices3d.at(i).at(skipped_vertices3d.front().size() - 2));
+				tempinter.emplace_back(skipped_vertices3d.at(i).at(skipped_vertices3d.front().size() - 3));
+				tempindex.emplace_back(counter);
+				counter ++;
+				tempindex.emplace_back(counter);
+				counter++;
+				tempindex.emplace_back(counter);
+				counter ++;
 			}
 		}
-		interpolatedX_vertices3d.push_back(std::move(tempinter));
+		interpolatedX_vertices3d.emplace_back(std::move(tempinter));
+		interpolatedX_index3d.emplace_back(tempindex);
 	}
 
 	interpolatedX_vertices = flatten(interpolatedX_vertices3d);
-	interpolatedX_index3d = calcIndex3d(interpolatedX_vertices3d.size(), interpolatedX_vertices3d.front().size());
 	EBO_interpolatedX_indices = createEBO(interpolatedX_index3d);
-	Rebuffer(interpolatedX_vertices, EBO_indices, VAO[2], VBO[2], EBO[2]);
-
+	cout << "potate" << endl;
 }
 
 glm::vec3 catmullRom(glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4, float u) {
