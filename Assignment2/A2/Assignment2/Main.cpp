@@ -19,16 +19,19 @@
 using namespace std;
 using namespace cimg_library;
 
+std::ostream& operator<<(std::ostream& stream, const glm::mat4& matrix);
+std::ostream& operator<<(std::ostream& stream, const glm::mat4x3& matrix);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
+void interpolateX();
 vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, vector<vector<int>> &index3d);
 vector<vector<int>> calcIndex3d(int image_height, int image_width);
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
 vector <int> createEBO(vector<vector<int>> index3d);
 void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, GLuint VBO, GLuint EBO);
-
+glm::vec3 catmullRom(glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4, float u);
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
 
@@ -51,14 +54,19 @@ float lastFrame = 0.0f;
 //global variables
 vector<vector<glm::vec3>> all_vertices3d;
 vector<vector<glm::vec3>> skipped_vertices3d;
+vector<vector<glm::vec3>> interpolatedX_vertices3d;
 vector<glm::vec3> skipped_vertices;
 vector<glm::vec3> all_vertices;
+vector<glm::vec3> interpolatedX_vertices;
 vector<vector<int>> full_index3d;
 vector<vector<int>> index3d;
+vector<vector<int>> interpolatedX_index3d;
 vector<int> EBO_full_indices;
 vector<int> EBO_indices;
-GLuint VAO[2], VBO[2], EBO[2];
+vector<int> EBO_interpolatedX_indices;
+GLuint VAO[3], VBO[3], EBO[3];
 int step;
+float u;
 
 //old camera
 /*
@@ -240,7 +248,12 @@ int main()
 			all_vertices.emplace_back(all_vertices3d.at(i).at(j));
 		}
 	}
-	
+	//input
+	cout << "please enter desired step size" << endl;
+	cin >> step;
+	cout << "please enter desired step size for catmull-rom (between 0 and 1)" << endl;
+	cin >> u;
+
 	//Create vertices for step 2------------------------------------------------------------------
 	//create vector to be used for EBO creation for full vector
 	full_index3d = calcIndex3d(image_height,image_width);
@@ -248,8 +261,6 @@ int main()
 	//---------------------------------------------------------------------------------------------
 
 	//Create vertices for step 3 -------------------------------------------------------------------
-	cout << "please enter desired step size" << endl;
-	cin >> step;
 	index3d;
 	//create the stepped vertices
 	skipped_vertices3d = calcStepVertices(image_height, image_width, index3d);
@@ -258,11 +269,17 @@ int main()
 	//EBO vertex creator
 	EBO_indices = createEBO(index3d);
 	//-----------------------------------------------------------------------------------------------
+	
+	//Create vertices for step 4---------------------------------------------------------------------
+	interpolateX();
+	//-----------------------------------------------------------------------------------------------
 
 	cout << "image processing complete" << endl;
 	//--------------------------------------------------------------------------------------
 
-	for (int i = 0; i < 2; i++)
+	//TODO YOUR ERRORS WILL LEAD YOU HERE
+	//WHEN IT DOES, CHANGE TO 4
+	for (int i = 0; i < 3; i++)
 	{
 		glGenVertexArrays(1, &VAO[i]);
 		glGenBuffers(1, &VBO[i]);
@@ -317,6 +334,14 @@ int main()
 			glDrawElements(objRenderMode, EBO_indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
+		if (state4) {
+			glBindVertexArray(VAO[2]);
+			model_matrix = glm::mat4(1.0f);
+			model_matrix = glm::scale(model_matrix, glm::vec3(0.05f, 0.05f, 0.05f));
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model_matrix));
+			glDrawElements(objRenderMode, EBO_interpolatedX_indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);
@@ -356,6 +381,11 @@ void processInput(GLFWwindow *window)
 		state2 = false;
 		state3 = true;
 		state4 = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+		state2 = false;
+		state3 = false;
+		state4 = true;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
@@ -519,7 +549,106 @@ void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, G
 	cout << "Elements buffered" << endl;
 }
 
-void interpolateX() 
+///calculate every point 
+void interpolateX()
 {
+	for (int i = 0; i < skipped_vertices3d.size(); i++) {
 
+		vector<glm::vec3> tempinter;
+		for (int j = 1; j < skipped_vertices3d.front().size() - 4; j++) {
+			if (j + 3 > skipped_vertices3d.front().size()) { cout << "ERROR: OUT OF VECTOR 559" << endl; }
+			for (float k = u; k < u; k += u)
+			{
+				tempinter.emplace_back(catmullRom(skipped_vertices3d.at(i).at(j), skipped_vertices3d.at(i).at(j + 1), skipped_vertices3d.at(i).at(j + 2), skipped_vertices3d.at(i).at(j + 3), k));
+			}
+		}
+		interpolatedX_vertices3d.push_back(std::move(tempinter));
+	}
+
+	interpolatedX_vertices = flatten(interpolatedX_vertices3d);
+	interpolatedX_index3d = calcIndex3d(interpolatedX_vertices3d.size(), interpolatedX_vertices3d.front().size());
+	EBO_interpolatedX_indices = createEBO(interpolatedX_index3d);
+	Rebuffer(interpolatedX_vertices, EBO_indices, VAO[2], VBO[2], EBO[2]);
+
+}
+
+glm::vec3 catmullRom(glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4, float u) {
+	float s = 0.5f;
+	float u2 = u*u;
+	float u3 = u*u*u;
+
+	glm::mat2x4 umat(0.0f);
+	//row 1
+	umat[0][0] = u3;
+	umat[0][1] = u2;
+	umat[0][2] = u;
+	umat[0][3] = 1;
+	//ignore row2
+
+	glm::mat4 basis(1.0f);
+	//column 1
+	basis[0][0] = -s;
+	basis[1][0] = 2.0f*s;
+	basis[2][0] = -s;
+	basis[3][0] = 0;
+	//column 2
+	basis[0][1] = 2.0f - s;
+	basis[1][1] = s - 3.0f;
+	basis[2][1] = 0;
+	basis[3][1] = 1.0f;
+	//column 3
+	basis[0][2] = s - 2.0f;
+	basis[1][2] = 3.0f - 2.0f*s;
+	basis[2][2] = s;
+	basis[3][2] = 0;
+	//column 4
+	basis[0][3] = s;
+	basis[1][3] = -s;
+	basis[2][3] = 0;
+	basis[3][3] = 0;
+	
+	glm::mat4x3 control(0.0f);
+	//column1
+	control[0][0] = point1.x;
+	control[1][0] = point2.x;
+	control[2][0] = point3.x;
+	control[3][0] = point4.x;
+	//column1
+	control[0][1] = point1.y;
+	control[1][1] = point2.y;
+	control[2][1] = point3.y;
+	control[3][1] = point4.y;
+	//column1
+	control[0][2] = point1.z;
+	control[1][2] = point2.z;
+	control[2][2] = point3.z;
+	control[3][2] = point4.z;
+
+	glm::mat4x3 m1 = control * basis;
+	glm::mat2x3 m2= m1* umat;
+	glm::vec3 result = glm::vec3(m2[0][0], m2[0][1], m2[0][2]);
+
+	return result;
+}
+
+std::ostream& operator<<(std::ostream& stream, const glm::mat4& matrix) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			stream.width(10);
+			stream << matrix[i][j];
+		}
+		stream << '\n';
+	}
+	return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const glm::mat4x3& matrix) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 3; j++) {
+			stream.width(10);
+			stream << matrix[i][j];
+		}
+		stream << '\n';
+	}
+	return stream;
 }
