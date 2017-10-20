@@ -84,7 +84,7 @@ public:
 		if (direction == DOWN)
 			Position -= Up * velocity;
 
-		std::cout << "Position(x,y,z): "<< Position.x << ", " << Position.y << ", " << Position.z << std::endl;
+		//std::cout << "Position(x,y,z): "<< Position.x << ", " << Position.y << ", " << Position.z << std::endl;
     }
 
     // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
@@ -96,8 +96,8 @@ public:
         Yaw   += xoffset;
         Pitch += yoffset;
 
-		std::cout << "Yaw: " << Yaw << std::endl;
-		std::cout << "Pitch: " << Pitch << std::endl;
+		//std::cout << "Yaw: " << Yaw << std::endl;
+		//std::cout << "Pitch: " << Pitch << std::endl;
 
         // Make sure that when pitch is out of bounds, screen doesn't get flipped
         if (constrainPitch)

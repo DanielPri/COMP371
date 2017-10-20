@@ -76,7 +76,7 @@ const glm::vec3 eye(100.0f, 150.0f, 300.0f);
 // Is called whenever a key is pressed/released via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-	std::cout << key << std::endl;	
+	//std::cout << key << std::endl;	
 }
 
 // The MAIN function, from here we start the application and run the game loop
@@ -262,12 +262,12 @@ int main()
 	cout << "image processing complete" << endl;
 	//--------------------------------------------------------------------------------------
 
-	glGenVertexArrays(1, &VAO[0]);
-	glGenVertexArrays(1, &VAO[1]);
-	glGenBuffers(1, &VBO[0]);
-	glGenBuffers(1, &VBO[1]);
-	glGenBuffers(1, &EBO[0]);
-	glGenBuffers(1, &EBO[1]);
+	for (int i = 0; i < 2; i++)
+	{
+		glGenVertexArrays(1, &VAO[i]);
+		glGenBuffers(1, &VBO[i]);
+		glGenBuffers(1, &EBO[i]);
+	}
 
 	//Vertices for step 2
 	Rebuffer(all_vertices, EBO_full_indices, VAO[0], VBO[0], EBO[0]);
@@ -292,9 +292,6 @@ int main()
 		glClearColor(0.0f, 0.1f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-
-		//glm::mat4 view_matrix;
-		//view_matrix = glm::lookAt(eye, center, up);
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 model_matrix;
@@ -347,7 +344,9 @@ void processInput(GLFWwindow *window)
 		camera.ProcessKeyboard(UP, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 		camera.ProcessKeyboard(DOWN, deltaTime);
-	
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		camera.ProcessKeyboard(DOWN, deltaTime);
+
 	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS){
 		state2 = true;
 		state3 = false;
@@ -518,4 +517,9 @@ void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO, G
 
 	glBindVertexArray(0);
 	cout << "Elements buffered" << endl;
+}
+
+void interpolateX() 
+{
+
 }
