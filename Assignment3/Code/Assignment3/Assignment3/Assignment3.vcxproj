@@ -117,6 +117,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.hpp" />
+    <ClInclude Include="src\CImg.h" />
     <ClInclude Include="src\Light.hpp" />
     <ClInclude Include="src\Model.hpp" />
     <ClInclude Include="src\sceneLoader.hpp" />
