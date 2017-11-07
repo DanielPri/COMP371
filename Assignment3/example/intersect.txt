@@ -1,0 +1,59 @@
+///Implementation of the Moller Trumbone algo.
+///https://en.wikipedia.org/wiki/Möller–Trumbore_intersection_algorithm
+bool ray_intersect_triangle(glm::vec3 rayO, glm::vec3 rayDir, Triangle * tri, glm::vec3 &resultinPoint, glm::vec3 &planeNormal)
+{
+	const float EPSILON = 0.0000001;
+	float a, f, u, v;
+	const glm::vec3 edge1 = tri->v2 - tri->v1;
+	const glm::vec3 edge2 = tri->v3 - tri->v1;
+	planeNormal = glm::cross(edge1, edge2);
+	const glm::vec3 h = glm::cross(rayDir, edge2);
+	a = glm::dot(edge1, h);
+	if (a > -EPSILON && a < EPSILON)
+		return false;
+	f = 1 / a;
+	glm::vec3 s = rayO - tri->v1;
+	u = f * (glm::dot(s, h));
+	if (u < 0.0 || u > 1.0)
+		return false;
+	const glm::vec3 q = glm::cross(s, edge1);
+	v = f * glm::dot(rayDir, q);
+	if (v < 0.0 || u + v > 1.0)
+		return false;
+	// At this stage we can compute t to find out where the intersection point is on the line.
+	float t = f *  glm::dot(edge2, q);
+	if (t > EPSILON) // ray intersection
+	{
+		resultinPoint = rayO + rayDir * t;
+		return true;
+	}
+	else // This means that there is a line intersection but not a ray intersection.
+		return false;
+}
+
+///Implementation of the Ray-Sphere intersection
+///https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
+bool ray_intersect_circle(glm::vec3 rayO, glm::vec3 ray, Sphere * sphere, float &t)
+{
+	float t0, t1; // solutions for t if the ray intersects 
+	// geometric solution
+	float radiusSquared = sphere->radius*sphere->radius;
+	glm::vec3 L = sphere->position - rayO;
+	float tca = glm::dot(L, ray);
+
+	float d2 = glm::dot(L, L) - tca * tca;
+	if (d2 > radiusSquared) return false;
+	float thc = sqrt(radiusSquared - d2);
+	t0 = tca - thc;
+	t1 = tca + thc;
+	if (t0 > t1) std::swap(t0, t1);
+
+	if (t0 < 0) {
+		t0 = t1; // if t0 is negative, let's use t1 instead 
+		if (t0 < 0) return false; // both t0 and t1 are negative 
+	}
+
+	t = t0;
+
+	return true;
+}

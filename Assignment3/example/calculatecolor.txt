@@ -1,0 +1,57 @@
+//Credit
+///https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/ligth-and-shadows
+glm::vec3 getResultingColor(glm::vec3 normal_at_point, glm::vec3 position_at_point, glm::vec3 rayO, Parent * object)
+{
+	glm::vec3 resultantColor = object->ambient_color;
+	glm::vec3 combinedContribution = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	for (auto lighto : lights)
+	{
+		glm::vec3 shadow_ray = glm::normalize(lighto->position - position_at_point);
+		shadow_ray = glm::normalize(shadow_ray);
+		auto in_shadow = false;
+		auto bias = 0.1f;
+
+		glm::vec3 resulting_point, normal_point;
+		//check triangle
+		for (auto tri : triangles)
+		{
+			if (ray_intersect_triangle(position_at_point + (bias * shadow_ray), shadow_ray, tri, resulting_point, normal_point))
+			{
+				in_shadow = true;
+				break;
+			}
+		}
+
+		float resultingPointSphere;
+		//check sphere
+		for (auto cir : spheres)
+		{
+			if (ray_intersect_circle(position_at_point + (bias * shadow_ray), shadow_ray, cir, resultingPointSphere))
+			{
+				in_shadow = true;
+				break;
+			}
+		}
+
+		//if (!in_shadow)
+		//{
+			glm::vec3 norm = normalize(normal_at_point);			
+			glm::vec3 light_direction = glm::normalize(lighto->position - position_at_point);
+			glm::vec3 diffuseContribution = max(dot(norm, light_direction), 0.0f) * object->diffuse_color;
+
+			glm::vec3 viewDir = glm::normalize(rayO - position_at_point);
+			glm::vec3 reflectDir = normalize(reflect(-light_direction, norm));
+
+			float spec = max(dot(viewDir, reflectDir),0.0f);
+			float shine = pow(max(dot(viewDir, reflectDir), 0.0f), object->shininess_factor);		
+			glm::vec3 specular_contribution = object->specular_color * shine;
+
+			combinedContribution += lighto->color * (specular_contribution + diffuseContribution);
+		//}
+	}
+	resultantColor = object->ambient_color + combinedContribution;
+
+	return clamp(resultantColor);
+	//return resultantColor;
+}
