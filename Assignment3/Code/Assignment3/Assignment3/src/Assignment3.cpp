@@ -11,12 +11,13 @@ using namespace cimg_library;
 #define PI 3.141592653589
 
 void output(SceneLoader sceneloader);
+void progressReport(long count, long size);
 bool sphere_intersect(glm::vec3 spherepos, glm::vec3 camerapos, glm::vec3 ray, float rad, glm::vec3& ouIntersectpoint, float &distance);
 bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle inTriangle, glm::vec3& outIntersectionPoint, float& distance);
 
 int main() {
 	std::string location = "..\\..\\..\\scene_files\\";
-	SceneLoader sceneloader(location + "scene1.txt");
+	SceneLoader sceneloader(location + "pacman.txt");
 	output(sceneloader);
 	
 	//load all objects
@@ -50,6 +51,8 @@ int main() {
 	std::cout << "Now Loading! please wait! There are " << height*width << " pixels to compute" << std::endl;
 	//using following link as methodology for raytracing
 	//https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-generating-camera-rays/generating-camera-rays
+	
+	long counter = 0;
 	for (int j = 0; j < height; j++) {
 		for (int i = 0; i < width; i++) {
 			//Pixel Camera
@@ -183,6 +186,8 @@ int main() {
 			//shadow
 			float color[3]{pixelColor.x, pixelColor.y, pixelColor.z};
 			image.draw_point(i, j, color);
+			counter++;
+			progressReport(counter,height*width);
 		}
 	}
 	
@@ -303,4 +308,40 @@ bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle in
 	}
 	else // This means that there is a line intersection but not a ray intersection.
 		return false;
+}
+
+void progressReport(long count, long size) {
+	long tenth = size / 10;
+	long hundredth = tenth / 10;
+
+	if (count == tenth) {
+		std::cout << "10% loaded" << std::endl;
+	}
+	else if (count == tenth*2) {
+		std::cout << "20% loaded" << std::endl;
+	}
+	else if (count == tenth * 3) {
+		std::cout << "30% loaded" << std::endl;
+	}
+	else if (count == tenth * 4) {
+		std::cout << "40% loaded" << std::endl;
+	}
+	else if (count == tenth * 5) {
+		std::cout << "50% loaded" << std::endl;
+	}
+	else if (count == tenth * 6) {
+		std::cout << "60% loaded" << std::endl;
+	}
+	else if (count == tenth * 7) {
+		std::cout << "70% loaded" << std::endl;
+	}
+	else if (count == tenth * 8) {
+		std::cout << "80% loaded" << std::endl;
+	}
+	else if (count == tenth * 9) {
+		std::cout << "90% loaded" << std::endl;
+	}
+	else if (count == size) {
+		std::cout << "100% loaded" << std::endl;
+	}
 }
