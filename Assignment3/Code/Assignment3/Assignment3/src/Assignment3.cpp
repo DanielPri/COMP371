@@ -2,18 +2,19 @@
 
 #include "CImg.h"
 #include "SceneLoader.hpp"
-#include "glm\trigonometric.hpp"	//tangent
+#include "glm\trigonometric.hpp"	//tangent and radians
 #include "glm\geometric.hpp"		//normalize
-#include "glm\mat4x4.hpp"			//4x4 matrix
 
 using namespace cimg_library;
 #define PI 3.1415926535
 
 void output(SceneLoader sceneloader);
+bool sphere_intersect(glm::vec3 spherepos, glm::vec3 camerapos, glm::vec3 ray, float rad, glm::vec3& ouIntersectpoint, float &distance);
+bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle inTriangle, glm::vec3& outIntersectionPoint, float& distance);
 
 int main() {
 
-	SceneLoader sceneloader("E:\\Dropbox\\Dropbox\\Concordia\\SOEN\\05_Fall2017\\COMP371\\Assignments\\COMP371\\Assignment3\\scene_files\\scene1.txt");
+	SceneLoader sceneloader("..\\..\\..\\scene_files\\scene1.txt");
 	output(sceneloader);
 	std::cout <<std::endl;
 
@@ -27,8 +28,6 @@ int main() {
 	//setting up CImg
 	CImg<float> image(width, height, 1, 3, 0);
 
-	std::vector<glm::vec3> directions;
-
 	//using following link as methodology for raytracing
 	//https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-generating-camera-rays/generating-camera-rays
 	for (int j = 0; j < height; j++) {
@@ -41,17 +40,81 @@ int main() {
 			glm::vec3 camera = sceneloader.camera.position();
 			glm::vec3 ray_direction = glm::vec3(PCx, PCy, -1) - camera;
 			ray_direction = glm::normalize(ray_direction);
-			
-			//vector of all our directions. can be deleted.
-			directions.emplace_back(ray_direction);
 
-			glm::vec3 pixelColor(1.0f);
-			float color[3]{pixelColor.x*ray_direction.x ,pixelColor.y *ray_direction.y, pixelColor.z *ray_direction.z};
+			glm::vec3 pixelColor(0.0f);
 
+			//sphere intersect - finds nearest sphere and its distance
+			glm::vec3 intersectpoint;
+			float nearest_object; //distance of nearest object
+			int object_index;
+			int intersects = 0;
+			for (int k = 0; k < sceneloader.spheres.size(); k++) {
+				float temp_distance;
+				glm::vec3 temp_intersectpoint;
+				if (sphere_intersect(sceneloader.spheres[k].position(), camera, ray_direction, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
+					if (!intersects || temp_distance < nearest_object) {
+						nearest_object = temp_distance;
+						intersectpoint = temp_intersectpoint;
+						object_index = k;
+						intersects = 1;
+					}
+				}
+			}
+			glm::vec3 triangle_intersect;
+			for (int k = 0; k < sceneloader.triangles.size(); k++) {
+				float temp_distance;
+				glm::vec3 temp_intersectpoint;
+				if (RayIntersectsTriangle(camera, ray_direction, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
+					if (!intersects || temp_distance < nearest_object) {
+						nearest_object = temp_distance;
+						intersectpoint = temp_intersectpoint;
+						object_index = k;
+						intersects = 2;
+					}
+				}
+			}
+			//place all other intersects here
+
+			if (intersects == 1) {
+				glm::vec3 normal = glm::normalize(intersectpoint - sceneloader.spheres[object_index].position());
+				
+				glm::vec3 v = -ray_direction;
+				for (int k = 0; k < sceneloader.lights.size(); k++) {
+					glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
+					glm::vec3 reflection = glm::reflect(light_direction, normal);
+					float ln = glm::dot(normal, light_direction);
+					float rv = glm::dot(reflection, v);
+					if (ln < 0) { ln = 0; }
+					if (rv < 0) { rv = 0; }
+					pixelColor = sceneloader.spheres[object_index].ambient();
+					glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.spheres[object_index].diffuse()*ln + sceneloader.spheres[object_index].specular()*glm::pow(rv, sceneloader.spheres[object_index].shininess()));
+					pixelColor += lightAddition;
+				}
+			}
+			else if (intersects == 2) {
+				glm::vec3 line1 = sceneloader.triangles[object_index].coordinate2() - sceneloader.triangles[object_index].coordinate1();
+				glm::vec3 line2 = sceneloader.triangles[object_index].coordinate3() - sceneloader.triangles[object_index].coordinate1();
+				glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
+
+				glm::vec3 v = -ray_direction;
+				for (int k = 0; k < sceneloader.lights.size(); k++) {
+					glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
+					glm::vec3 reflection = glm::reflect(light_direction, normal);
+					float ln = glm::dot(normal, light_direction);
+					float rv = glm::dot(reflection, v);
+					if (ln < 0) { ln = 0; }
+					if (rv < 0){rv = 0;}
+
+					pixelColor = sceneloader.triangles[object_index].ambient();
+					glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.triangles[object_index].diffuse()*ln + sceneloader.triangles[object_index].specular()*glm::pow(rv, sceneloader.triangles[object_index].shininess()));
+					pixelColor += lightAddition;
+				}
+			}
+
+			float color[3]{pixelColor.x, pixelColor.y, pixelColor.z};
 			image.draw_point(i, j, color);
 		}
 	}
-	directions;
 	
 	CImgDisplay main_disp(image, "Resulting Image");
 	image.normalize(0, 255);
@@ -93,6 +156,18 @@ void output(SceneLoader sceneloader) {
 		std::cout << "model shininess: " << model.shininess() << std::endl;
 	}
 
+	std::cout << "\nTRIANGLE(S)" << std::endl;
+	std::cout << "there are " << sceneloader.triangles.size() << " triangle(s)" << std::endl;
+	for (auto triangle : sceneloader.triangles) {
+		std::cout << "triangle coordinate 1: " << triangle.coordinate1().x << ", " << triangle.coordinate1().y << ", " << triangle.coordinate1().z << std::endl;
+		std::cout << "triangle coordinate 2: " << triangle.coordinate2().x << ", " << triangle.coordinate2().y << ", " << triangle.coordinate2().z << std::endl;
+		std::cout << "triangle coordinate 3: " << triangle.coordinate3().x << ", " << triangle.coordinate3().y << ", " << triangle.coordinate3().z << std::endl;
+		std::cout << "triangle ambience: " << triangle.ambient().x << ", " << triangle.ambient().y << ", " << triangle.ambient().z << std::endl;
+		std::cout << "triangle diffuse: " << triangle.diffuse().x << ", " << triangle.diffuse().y << ", " << triangle.diffuse().z << std::endl;
+		std::cout << "triangle specular: " << triangle.specular().x << ", " << triangle.specular().y << ", " << triangle.specular().z << std::endl;
+		std::cout << "triangle shininess: " << triangle.shininess() << std::endl;
+	}
+
 	std::cout << "\nLIGHT(S)" << std::endl;
 	std::cout << "there are " << sceneloader.lights.size() << " light(s)" << std::endl;
 	for (auto light : sceneloader.lights) {
@@ -100,4 +175,62 @@ void output(SceneLoader sceneloader) {
 		std::cout << "light color: " << light.color().x << ", " << light.color().y << ", " << light.color().z << std::endl;
 	}
 
+}
+
+//sphere intersect using https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
+bool sphere_intersect(glm::vec3 spherepos, glm::vec3 camerapos, glm::vec3 ray, float rad, glm::vec3& ouIntersectpoint, float &distance) {
+	float t0, t1;
+	glm::vec3 L = spherepos - camerapos;
+	float tca = glm::dot(L, ray);
+	// if (tca < 0) return false;
+	float d2 = glm::dot(L, L) - tca * tca;
+	if (d2 > (rad * rad)) return false;
+	float thc = sqrt((rad * rad) - d2);
+	t0 = tca - thc;
+	t1 = tca + thc;
+	if (t0 > t1) std::swap(t0, t1);
+
+	if (t0 < 0) {
+		t0 = t1; // if t0 is negative, let's use t1 instead 
+		if (t0 < 0) return false; // both t0 and t1 are negative 
+	}
+	distance = t0;
+	ouIntersectpoint = camerapos + ray * distance;
+	return true;
+}
+
+//from https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle inTriangle, glm::vec3& outIntersectionPoint, float &distance)
+{
+	const float EPSILON = 0.0000001;
+	glm::vec3 vertex0 = inTriangle.coordinate1();
+	glm::vec3 vertex1 = inTriangle.coordinate2();
+	glm::vec3 vertex2 = inTriangle.coordinate3();
+	glm::vec3 edge1, edge2, h, s, q;
+	float a, f, u, v;
+	edge1 = vertex1 - vertex0;
+	edge2 = vertex2 - vertex0;
+	h = glm::cross(rayVector, edge2);
+	a = glm::dot(edge1, h);
+	if (a > -EPSILON && a < EPSILON)
+		return false;
+	f = 1 / a;
+	s = rayOrigin - vertex0;
+	u = f * (glm::dot(s, h));
+	if (u < 0.0 || u > 1.0)
+		return false;
+	q = glm::cross(s, edge1);
+	v = f * glm::dot(rayVector, q);
+	if (v < 0.0 || u + v > 1.0)
+		return false;
+	// At this stage we can compute t to find out where the intersection point is on the line.
+	float t = f * glm::dot(edge2, q);
+	if (t > EPSILON) // ray intersection
+	{
+		outIntersectionPoint = rayOrigin + rayVector * t;
+		distance = t;
+		return true;
+	}
+	else // This means that there is a line intersection but not a ray intersection.
+		return false;
 }

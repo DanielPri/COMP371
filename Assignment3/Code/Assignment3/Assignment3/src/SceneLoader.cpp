@@ -66,6 +66,25 @@ bool SceneLoader::load(std::string scene_file) {
 			Model newmodel(model_file, model_amb, model_dif, model_spe, model_shi);
 			models.emplace_back(std::move(newmodel));
 		}
+		else if (line == "triangle") {//
+			std::getline(textfile, line);
+			setTriangleV1(line);
+			std::getline(textfile, line);
+			setTriangleV2(line);
+			std::getline(textfile, line);
+			setTriangleV3(line);
+			std::getline(textfile, line);
+			setTriangleAmb(line);
+			std::getline(textfile, line);
+			setTriangleDif(line);
+			std::getline(textfile, line);
+			setTriangleSpe(line);
+			std::getline(textfile, line);
+			setTriangleShi(line);
+
+			Triangle newtriangle(triangle_v1, triangle_v2, triangle_v3, triangle_amb, triangle_dif, triangle_spe, triangle_shi);
+			triangles.emplace_back(std::move(newtriangle));
+		}
 		else {
 			std::cout << "The following line was ignored: " << line << std::endl;
 		}
@@ -218,5 +237,66 @@ void SceneLoader::setModelSpe(std::string input) {
 void SceneLoader::setModelShi(std::string input) {
 	std::vector<std::string> str_values = split(input, " ");
 	model_shi = std::stod(str_values[1]);
+	return;
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//triangle functions
+void SceneLoader::setTriangleV1(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	float x, y, z;
+	x = std::stod(str_values[1]);
+	y = std::stod(str_values[2]);
+	z = std::stod(str_values[3]);
+	triangle_v1 = glm::vec3(x, y, z);
+	return;
+}
+void SceneLoader::setTriangleV2(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	float x, y, z;
+	x = std::stod(str_values[1]);
+	y = std::stod(str_values[2]);
+	z = std::stod(str_values[3]);
+	triangle_v2 = glm::vec3(x, y, z);
+	return;
+}
+void SceneLoader::setTriangleV3(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	float x, y, z;
+	x = std::stod(str_values[1]);
+	y = std::stod(str_values[2]);
+	z = std::stod(str_values[3]);
+	triangle_v3 = glm::vec3(x, y, z);
+	return;
+}
+void SceneLoader::setTriangleAmb(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	float x, y, z;
+	x = std::stod(str_values[1]);
+	y = std::stod(str_values[2]);
+	z = std::stod(str_values[3]);
+	triangle_amb = glm::vec3(x, y, z);
+	return;
+}
+void SceneLoader::setTriangleDif(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	float x, y, z;
+	x = std::stod(str_values[1]);
+	y = std::stod(str_values[2]);
+	z = std::stod(str_values[3]);
+	triangle_dif = glm::vec3(x, y, z);
+	return;
+}
+void SceneLoader::setTriangleSpe(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	float x, y, z;
+	x = std::stod(str_values[1]);
+	y = std::stod(str_values[2]);
+	z = std::stod(str_values[3]);
+	triangle_spe = glm::vec3(x, y, z);
+	return;
+}
+void SceneLoader::setTriangleShi(std::string input) {
+	std::vector<std::string> str_values = split(input, " ");
+	triangle_shi = std::stod(str_values[1]);
 	return;
 }

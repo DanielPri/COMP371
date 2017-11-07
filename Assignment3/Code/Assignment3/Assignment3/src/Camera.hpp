@@ -37,6 +37,7 @@ inline Camera::Camera(glm::vec3 xyz, float theta, float focal_length, float aspe
 	f = focal_length;
 	a = aspect_ratio;
 }
+
 inline void Camera::reininitalize(glm::vec3 xyz, float theta, float focal_length, float aspect_ratio) {
 	pos = xyz;
 	fov = theta;

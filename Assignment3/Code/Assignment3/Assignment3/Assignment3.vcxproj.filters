@@ -41,5 +41,8 @@
     <ClInclude Include="src\CImg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Triangle.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

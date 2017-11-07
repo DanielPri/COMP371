@@ -8,6 +8,7 @@
 #include "Light.hpp"
 #include "Sphere.hpp"
 #include "Model.hpp"
+#include "Triangle.hpp"
 
 class SceneLoader 
 {
@@ -38,6 +39,15 @@ class SceneLoader
 		glm::vec3 model_spe;		//specular color
 		float model_shi;			//shininess
 
+		//triangle variables
+		glm::vec3 triangle_v1;
+		glm::vec3 triangle_v2;
+		glm::vec3 triangle_v3;
+		glm::vec3 triangle_amb;		//ambient color
+		glm::vec3 triangle_dif;		//diffuse color
+		glm::vec3 triangle_spe;		//specular color
+		float triangle_shi;			//shininess
+
 		//FUNCTIONS------------------------------------------------
 		//camera functions
 		void setCameraPos(std::string input);
@@ -64,11 +74,21 @@ class SceneLoader
 		void setModelSpe(std::string input);
 		void  setModelShi(std::string input);
 
+		//triangle functions
+		void setTriangleV1(std::string input);
+		void setTriangleV2(std::string input);
+		void setTriangleV3(std::string input);
+		void setTriangleAmb(std::string input);
+		void setTriangleDif(std::string input);
+		void setTriangleSpe(std::string input);
+		void setTriangleShi(std::string input);
+
 	public:
 		Camera camera;
 		std::vector<Light> lights;
 		std::vector<Sphere> spheres;
 		std::vector<Model> models;
+		std::vector<Triangle> triangles;
 		
 		//functions
 		SceneLoader(std::string filename);
