@@ -15,7 +15,7 @@ bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle in
 
 int main() {
 
-	SceneLoader sceneloader("..\\..\\..\\scene_files\\scene2.txt");
+	SceneLoader sceneloader("..\\..\\..\\scene_files\\scene4.txt");
 	output(sceneloader);
 	std::cout <<std::endl;
 
@@ -48,7 +48,9 @@ int main() {
 			glm::vec3 intersectpoint;
 			float nearest_object; //distance of nearest object
 			int object_index;
-			int intersects = 0;
+			int intersects = 0;		//intersects variable indicates what is interesected	
+									//0 = no intersection
+									//1 = sphere
 			for (int k = 0; k < sceneloader.spheres.size(); k++) {
 				float temp_distance;
 				glm::vec3 temp_intersectpoint;
@@ -75,49 +77,86 @@ int main() {
 				}
 			}
 			//place all other intersects here
-
-			if (intersects == 1) {
-				glm::vec3 normal = glm::normalize(sceneloader.spheres[object_index].position() - intersectpoint);
+			
+			//check if shadowed
+			bool isShadowed = false;
+			if (intersects != 0) {
+				glm::vec3 light_ray = glm::normalize(sceneloader.lights[0].position() - intersectpoint);
 				
-				glm::vec3 v = -ray_direction;
-				for (int k = 0; k < sceneloader.lights.size(); k++) {
-					glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
-					glm::vec3 reflection = glm::reflect(light_direction, normal);
-					float ln = glm::dot(normal, light_direction);
-					float rv = glm::dot(reflection, v);
-					//std::max(ln, 0.0f);
-					//std::max(rv, 0.0f);
-					if (ln < 0) { ln = 0; }
-					if (rv < 0) { rv = 0; }
-					rv = pow(rv, sceneloader.spheres[object_index].shininess());
+				//check if spheres in the way
+				for (int k = 0; k < sceneloader.spheres.size(); k++) {
+					float temp_distance;
+					glm::vec3 temp_intersectpoint;
+					if (sphere_intersect(sceneloader.spheres[k].position(), intersectpoint, light_ray, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
+						isShadowed = true;
+					}
+				}
 
+				//check for triangles in the way
+				for (int k = 0; k < sceneloader.triangles.size(); k++) {
+					float temp_distance;
+					glm::vec3 temp_intersectpoint;
+					if (RayIntersectsTriangle(intersectpoint, light_ray, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
+						isShadowed = true;
+					}
+				}
+			}
+
+
+			//color the pixels
+			if (intersects == 1) {
+				if (!isShadowed) {
+					glm::vec3 normal = glm::normalize(sceneloader.spheres[object_index].position() - intersectpoint);
+					glm::vec3 v = -ray_direction;
+					for (int k = 0; k < sceneloader.lights.size(); k++) {
+						glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
+						glm::vec3 reflection = glm::reflect(light_direction, normal);
+						float ln = glm::dot(normal, light_direction);
+						float rv = glm::dot(reflection, v);
+						//std::max(ln, 0.0f);
+						//std::max(rv, 0.0f);
+						if (ln < 0) { ln = 0; }
+						if (rv < 0) { rv = 0; }
+						rv = pow(rv, sceneloader.spheres[object_index].shininess());
+
+						pixelColor = sceneloader.spheres[object_index].ambient();
+						glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.spheres[object_index].diffuse()*ln + sceneloader.spheres[object_index].specular()*rv);
+						pixelColor += lightAddition;
+					}
+				}
+				//shadow
+				else {
 					pixelColor = sceneloader.spheres[object_index].ambient();
-					glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.spheres[object_index].diffuse()*ln + sceneloader.spheres[object_index].specular()*rv);
-					pixelColor += lightAddition;
 				}
 			}
 			else if (intersects == 2) {
-				glm::vec3 line1 = sceneloader.triangles[object_index].coordinate2() - sceneloader.triangles[object_index].coordinate1();
-				glm::vec3 line2 = sceneloader.triangles[object_index].coordinate3() - sceneloader.triangles[object_index].coordinate1();
-				glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
-				normal = -normal;
+				if (!isShadowed) {
+					glm::vec3 line1 = sceneloader.triangles[object_index].coordinate2() - sceneloader.triangles[object_index].coordinate1();
+					glm::vec3 line2 = sceneloader.triangles[object_index].coordinate3() - sceneloader.triangles[object_index].coordinate1();
+					glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
+					normal = -normal;
 
-				glm::vec3 v = -ray_direction;
-				for (int k = 0; k < sceneloader.lights.size(); k++) {
-					glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
-					glm::vec3 reflection = glm::reflect(light_direction, normal);
-					float ln = glm::dot(normal, light_direction);
-					float rv = glm::dot(reflection, v);
-					if (ln < 0) { ln = 0; }
-					if (rv < 0) { rv = 0; }
-					rv = pow(rv, sceneloader.triangles[object_index].shininess());
+					glm::vec3 v = -ray_direction;
+					for (int k = 0; k < sceneloader.lights.size(); k++) {
+						glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
+						glm::vec3 reflection = glm::reflect(light_direction, normal);
+						float ln = glm::dot(normal, light_direction);
+						float rv = glm::dot(reflection, v);
+						if (ln < 0) { ln = 0; }
+						if (rv < 0) { rv = 0; }
+						rv = pow(rv, sceneloader.triangles[object_index].shininess());
 
-					pixelColor = sceneloader.triangles[object_index].ambient();
-					glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.triangles[object_index].diffuse()*ln + sceneloader.triangles[object_index].specular()*rv);
-					pixelColor += lightAddition;
+						pixelColor = sceneloader.triangles[object_index].ambient();
+						glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.triangles[object_index].diffuse()*ln + sceneloader.triangles[object_index].specular()*rv);
+						pixelColor += lightAddition;
+					}
 				}
-			}
+				else {
+					pixelColor = sceneloader.triangles[object_index].ambient();
+				}
 
+			}
+			//shadow
 			float color[3]{pixelColor.x, pixelColor.y, pixelColor.z};
 			image.draw_point(i, j, color);
 		}
