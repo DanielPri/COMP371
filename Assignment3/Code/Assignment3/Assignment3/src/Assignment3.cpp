@@ -80,6 +80,7 @@ int main() {
 			
 			//check if shadowed
 			bool isShadowed = false;
+			float bias = 1e-4;
 			if (intersects != 0) {
 				glm::vec3 light_ray = glm::normalize(sceneloader.lights[0].position() - intersectpoint);
 				
@@ -87,7 +88,7 @@ int main() {
 				for (int k = 0; k < sceneloader.spheres.size(); k++) {
 					float temp_distance;
 					glm::vec3 temp_intersectpoint;
-					if (sphere_intersect(sceneloader.spheres[k].position(), intersectpoint, light_ray, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
+					if (sphere_intersect(sceneloader.spheres[k].position(), intersectpoint + (bias*light_ray), light_ray, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
 						isShadowed = true;
 					}
 				}
@@ -96,7 +97,7 @@ int main() {
 				for (int k = 0; k < sceneloader.triangles.size(); k++) {
 					float temp_distance;
 					glm::vec3 temp_intersectpoint;
-					if (RayIntersectsTriangle(intersectpoint, light_ray, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
+					if (RayIntersectsTriangle(intersectpoint + (bias*light_ray), light_ray, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
 						isShadowed = true;
 					}
 				}
