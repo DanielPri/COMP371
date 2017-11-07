@@ -1,6 +1,7 @@
 #include <iostream>
 #include <math.h>
 
+#include "objloader.hpp"
 #include "CImg.h"
 #include "SceneLoader.hpp"
 #include "glm\trigonometric.hpp"	//tangent and radians
@@ -14,9 +15,26 @@ bool sphere_intersect(glm::vec3 spherepos, glm::vec3 camerapos, glm::vec3 ray, f
 bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle inTriangle, glm::vec3& outIntersectionPoint, float& distance);
 
 int main() {
-
-	SceneLoader sceneloader("..\\..\\..\\scene_files\\scene4.txt");
+	std::string location = "..\\..\\..\\scene_files\\";
+	SceneLoader sceneloader(location + "scene1.txt");
 	output(sceneloader);
+	
+	//load all objects
+	std::vector<glm::vec3> all_vertices;
+	std::vector<glm::vec3> all_normals;
+	std::vector<glm::vec2> all_uvs;
+	for (auto model : sceneloader.models) {
+		std::string filename = location + model.filename();
+		const char* objectname= filename.c_str();
+		if (loadOBJ(objectname, all_vertices, all_normals, all_uvs)) {
+			sceneloader.addOBJ(all_vertices, model);
+		}
+		else
+			std::cout << "failed to load object " << model.filename() << std::endl;
+	}
+	//TODO
+	std::cout << "\nthere are now " << sceneloader.triangles.size() << " triangles" << std::endl;
+
 	std::cout <<std::endl;
 
 	//finding width and height
@@ -29,6 +47,7 @@ int main() {
 	//setting up CImg
 	CImg<float> image(width, height, 1, 3, 0);
 
+	std::cout << "Now Loading! please wait! There are " << height*width << " pixels to compute" << std::endl;
 	//using following link as methodology for raytracing
 	//https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-generating-camera-rays/generating-camera-rays
 	for (int j = 0; j < height; j++) {
@@ -78,84 +97,88 @@ int main() {
 			}
 			//place all other intersects here
 			
-			//check if shadowed
+			//check if shadowed and color
 			bool isShadowed = false;
-			float bias = 1e-4;
-			if (intersects != 0) {
-				glm::vec3 light_ray = glm::normalize(sceneloader.lights[0].position() - intersectpoint);
-				
-				//check if spheres in the way
-				for (int k = 0; k < sceneloader.spheres.size(); k++) {
-					float temp_distance;
-					glm::vec3 temp_intersectpoint;
-					if (sphere_intersect(sceneloader.spheres[k].position(), intersectpoint + (bias*light_ray), light_ray, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
-						isShadowed = true;
+			float bias = 1e-3;
+
+			//for each light, check values
+			for (int li = 0; li < sceneloader.lights.size(); li++) {
+				if (intersects != 0) {
+					glm::vec3 light_ray = glm::normalize(sceneloader.lights[li].position() - intersectpoint);
+
+					//check if spheres in the way
+					for (int k = 0; k < sceneloader.spheres.size(); k++) {
+						float temp_distance;
+						glm::vec3 temp_intersectpoint;
+						if (sphere_intersect(sceneloader.spheres[k].position(), intersectpoint + (bias*light_ray), light_ray, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
+							isShadowed = true;
+						}
+					}
+
+					//check for triangles in the way
+					for (int k = 0; k < sceneloader.triangles.size(); k++) {
+						float temp_distance;
+						glm::vec3 temp_intersectpoint;
+						if (RayIntersectsTriangle(intersectpoint + (bias*light_ray), light_ray, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
+							isShadowed = true;
+						}
 					}
 				}
 
-				//check for triangles in the way
-				for (int k = 0; k < sceneloader.triangles.size(); k++) {
-					float temp_distance;
-					glm::vec3 temp_intersectpoint;
-					if (RayIntersectsTriangle(intersectpoint + (bias*light_ray), light_ray, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
-						isShadowed = true;
+
+
+				//color the pixels
+				if (intersects == 1) {
+					if (!isShadowed) {
+						glm::vec3 normal = glm::normalize(sceneloader.spheres[object_index].position() - intersectpoint);
+						glm::vec3 v = -ray_direction;
+					
+							glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[li].position());
+							glm::vec3 reflection = glm::reflect(light_direction, normal);
+							float ln = glm::dot(normal, light_direction);
+							float rv = glm::dot(reflection, v);
+							//std::max(ln, 0.0f);
+							//std::max(rv, 0.0f);
+							if (ln < 0) { ln = 0; }
+							if (rv < 0) { rv = 0; }
+							rv = pow(rv, sceneloader.spheres[object_index].shininess());
+
+							pixelColor += sceneloader.spheres[object_index].ambient();
+							glm::vec3 lightAddition = sceneloader.lights[li].color()*(sceneloader.spheres[object_index].diffuse()*ln + sceneloader.spheres[object_index].specular()*rv);
+							pixelColor += lightAddition;
+						
+					}
+					//shadow
+					else {
+						pixelColor += sceneloader.spheres[object_index].ambient();
 					}
 				}
-			}
+				else if (intersects == 2) {
+					if (!isShadowed) {
+						glm::vec3 line1 = sceneloader.triangles[object_index].coordinate2() - sceneloader.triangles[object_index].coordinate1();
+						glm::vec3 line2 = sceneloader.triangles[object_index].coordinate3() - sceneloader.triangles[object_index].coordinate1();
+						glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
+						normal = -normal;
 
+						glm::vec3 v = -ray_direction;
+							glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[li].position());
+							glm::vec3 reflection = glm::reflect(light_direction, normal);
+							float ln = glm::dot(normal, light_direction);
+							float rv = glm::dot(reflection, v);
+							if (ln < 0) { ln = 0; }
+							if (rv < 0) { rv = 0; }
+							rv = pow(rv, sceneloader.triangles[object_index].shininess());
 
-			//color the pixels
-			if (intersects == 1) {
-				if (!isShadowed) {
-					glm::vec3 normal = glm::normalize(sceneloader.spheres[object_index].position() - intersectpoint);
-					glm::vec3 v = -ray_direction;
-					for (int k = 0; k < sceneloader.lights.size(); k++) {
-						glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
-						glm::vec3 reflection = glm::reflect(light_direction, normal);
-						float ln = glm::dot(normal, light_direction);
-						float rv = glm::dot(reflection, v);
-						//std::max(ln, 0.0f);
-						//std::max(rv, 0.0f);
-						if (ln < 0) { ln = 0; }
-						if (rv < 0) { rv = 0; }
-						rv = pow(rv, sceneloader.spheres[object_index].shininess());
-
-						pixelColor = sceneloader.spheres[object_index].ambient();
-						glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.spheres[object_index].diffuse()*ln + sceneloader.spheres[object_index].specular()*rv);
-						pixelColor += lightAddition;
+							pixelColor += sceneloader.triangles[object_index].ambient();
+							glm::vec3 lightAddition = sceneloader.lights[li].color()*(sceneloader.triangles[object_index].diffuse()*ln + sceneloader.triangles[object_index].specular()*rv);
+							pixelColor += lightAddition;
+						
 					}
-				}
-				//shadow
-				else {
-					pixelColor = sceneloader.spheres[object_index].ambient();
-				}
-			}
-			else if (intersects == 2) {
-				if (!isShadowed) {
-					glm::vec3 line1 = sceneloader.triangles[object_index].coordinate2() - sceneloader.triangles[object_index].coordinate1();
-					glm::vec3 line2 = sceneloader.triangles[object_index].coordinate3() - sceneloader.triangles[object_index].coordinate1();
-					glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
-					normal = -normal;
-
-					glm::vec3 v = -ray_direction;
-					for (int k = 0; k < sceneloader.lights.size(); k++) {
-						glm::vec3 light_direction = glm::normalize(intersectpoint - sceneloader.lights[k].position());
-						glm::vec3 reflection = glm::reflect(light_direction, normal);
-						float ln = glm::dot(normal, light_direction);
-						float rv = glm::dot(reflection, v);
-						if (ln < 0) { ln = 0; }
-						if (rv < 0) { rv = 0; }
-						rv = pow(rv, sceneloader.triangles[object_index].shininess());
-
-						pixelColor = sceneloader.triangles[object_index].ambient();
-						glm::vec3 lightAddition = sceneloader.lights[k].color()*(sceneloader.triangles[object_index].diffuse()*ln + sceneloader.triangles[object_index].specular()*rv);
-						pixelColor += lightAddition;
+					else {
+						pixelColor += sceneloader.triangles[object_index].ambient();
 					}
-				}
-				else {
-					pixelColor = sceneloader.triangles[object_index].ambient();
-				}
 
+				}
 			}
 			//shadow
 			float color[3]{pixelColor.x, pixelColor.y, pixelColor.z};

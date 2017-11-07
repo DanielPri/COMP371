@@ -94,4 +94,5 @@ class SceneLoader
 		SceneLoader(std::string filename);
 		bool load(std::string scene_file);
 		std::vector<std::string> split(std::string s, std::string delimiter);
+		void addOBJ(std::vector<glm::vec3> vertices, Model model);
 };

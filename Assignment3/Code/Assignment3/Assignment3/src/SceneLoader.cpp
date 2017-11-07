@@ -92,6 +92,13 @@ bool SceneLoader::load(std::string scene_file) {
 
 	textfile.close();
 	return true;
+}//-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//convert vertices to triangles
+void SceneLoader::addOBJ(std::vector<glm::vec3> vertices, Model model) {
+	for (int i = 0; i + 2 < vertices.size(); i += 3) {
+		Triangle newtriangle(vertices.at(i), vertices.at(i + 1), vertices.at(i + 2), model.ambient(), model.diffuse(), model.specular(), model.shininess());
+		triangles.emplace_back(newtriangle);
+	}
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //split string
