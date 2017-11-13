@@ -17,7 +17,7 @@ bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle in
 
 int main() {
 	std::string location = "..\\..\\..\\scene_files\\";
-	SceneLoader sceneloader(location + "pacman.txt");
+	SceneLoader sceneloader(location + "scene.txt");
 	output(sceneloader);
 	
 	//load all objects
@@ -73,11 +73,12 @@ int main() {
 			int intersects = 0;		//intersects variable indicates what is interesected	
 									//0 = no intersection
 									//1 = sphere
+
 			for (int k = 0; k < sceneloader.spheres.size(); k++) {
 				float temp_distance;
 				glm::vec3 temp_intersectpoint;
 				if (sphere_intersect(sceneloader.spheres[k].position(), camera, ray_direction, sceneloader.spheres[k].radius(), temp_intersectpoint, temp_distance)) {
-					if (!intersects || temp_distance < nearest_object) {
+					if (intersects == 0 || temp_distance < nearest_object) {
 						nearest_object = temp_distance;
 						intersectpoint = temp_intersectpoint;
 						object_index = k;
@@ -90,7 +91,7 @@ int main() {
 				float temp_distance;
 				glm::vec3 temp_intersectpoint;
 				if (RayIntersectsTriangle(camera, ray_direction, sceneloader.triangles[k], temp_intersectpoint, temp_distance)) {
-					if (!intersects || temp_distance < nearest_object) {
+					if (intersects == 0 || temp_distance < nearest_object) {
 						nearest_object = temp_distance;
 						intersectpoint = temp_intersectpoint;
 						object_index = k;
@@ -277,7 +278,7 @@ bool sphere_intersect(glm::vec3 spherepos, glm::vec3 camerapos, glm::vec3 ray, f
 //from https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle inTriangle, glm::vec3& outIntersectionPoint, float &distance)
 {
-	const float EPSILON = 0.0000001;
+	const float E = 0.0000001;
 	glm::vec3 vertex0 = inTriangle.coordinate1();
 	glm::vec3 vertex1 = inTriangle.coordinate2();
 	glm::vec3 vertex2 = inTriangle.coordinate3();
@@ -287,7 +288,7 @@ bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle in
 	edge2 = vertex2 - vertex0;
 	h = glm::cross(rayVector, edge2);
 	a = glm::dot(edge1, h);
-	if (a > -EPSILON && a < EPSILON)
+	if (a > -E && a < E)
 		return false;
 	f = 1 / a;
 	s = rayOrigin - vertex0;
@@ -300,7 +301,7 @@ bool RayIntersectsTriangle(glm::vec3 rayOrigin, glm::vec3 rayVector, Triangle in
 		return false;
 	// At this stage we can compute t to find out where the intersection point is on the line.
 	float t = f * glm::dot(edge2, q);
-	if (t > EPSILON) // ray intersection
+	if (t > E) // ray intersection
 	{
 		outIntersectionPoint = rayOrigin + rayVector * t;
 		distance = t;
@@ -315,33 +316,33 @@ void progressReport(long count, long size) {
 	long hundredth = tenth / 10;
 
 	if (count == tenth) {
-		std::cout << "10% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "10% loaded |---------";
 	}
-	else if (count == tenth*2) {
-		std::cout << "20% loaded" << std::endl;
+	else if (count == tenth * 2) {
+		std::cout << "\r" << std::flush << "20% loaded ||--------";
 	}
 	else if (count == tenth * 3) {
-		std::cout << "30% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "30% loaded |||-------";
 	}
 	else if (count == tenth * 4) {
-		std::cout << "40% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "40% loaded ||||------";
 	}
 	else if (count == tenth * 5) {
-		std::cout << "50% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "50% loaded |||||----";
 	}
 	else if (count == tenth * 6) {
-		std::cout << "60% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "60% loaded ||||||----";
 	}
 	else if (count == tenth * 7) {
-		std::cout << "70% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "70% loaded |||||||---";
 	}
 	else if (count == tenth * 8) {
-		std::cout << "80% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "80% loaded ||||||||--";
 	}
 	else if (count == tenth * 9) {
-		std::cout << "90% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "90% loaded |||||||||-";
 	}
 	else if (count == size) {
-		std::cout << "100% loaded" << std::endl;
+		std::cout << "\r" << std::flush << "100% loaded ||||||||||";
 	}
 }
