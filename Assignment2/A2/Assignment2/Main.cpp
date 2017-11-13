@@ -26,6 +26,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 void interpolateX();
+void interpolateZ();
 vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, vector<vector<int>> &index3d);
 vector<vector<int>> calcIndex3d(int image_height, int image_width);
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
@@ -46,6 +47,7 @@ bool firstMouse = true;
 bool state2 = true;
 bool state3 = false;
 bool state4 = false;
+bool state5 = false;
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -55,31 +57,24 @@ float lastFrame = 0.0f;
 vector<vector<glm::vec3>> all_vertices3d;
 vector<vector<glm::vec3>> skipped_vertices3d;
 vector<vector<glm::vec3>> interpolatedX_vertices3d;
+vector<vector<glm::vec3>> interpolatedZ_vertices3d;
 vector<glm::vec3> skipped_vertices;
 vector<glm::vec3> all_vertices;
 vector<glm::vec3> interpolatedX_vertices;
+vector<glm::vec3> interpolatedZ_vertices;
 vector<vector<int>> full_index3d;
 vector<vector<int>> index3d;
 vector<vector<int>> interpolatedX_index3d;
+vector<vector<int>> interpolatedZ_index3d;
 vector<int> EBO_full_indices;
 vector<int> EBO_indices;
 vector<int> EBO_interpolatedX_indices;
-GLuint VAO[3], VBO[3], EBO[3];
+vector<int> EBO_interpolatedZ_indices;
+GLuint VAO[4], VBO[4], EBO[4];
 int step;
 float u;
 
-//old camera
-/*
-glm::vec3 camera_position;
-glm::vec3 triangle_scale;
-glm::mat4 projection_matrix;
-
-
-// Constant vectors
-const glm::vec3 center(0.0f, 0.0f, 0.0f);
-const glm::vec3 up(0.0f, 1.0f, 0.0f);
-const glm::vec3 eye(100.0f, 150.0f, 300.0f);
-*/
+glm::mat4 projection;
 
 // Is called whenever a key is pressed/released via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -114,7 +109,7 @@ int main()
 	glfwSetKeyCallback(window, key_callback);
 
 	// tell GLFW to capture our mouse
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
 	glewExperimental = GL_TRUE;
@@ -254,9 +249,7 @@ int main()
 	cout << "please enter desired step size for catmull-rom (between 0 and 1)" << endl;
 	cin >> u;
 
-	//TODO YOUR ERRORS WILL LEAD YOU HERE
-	//WHEN IT DOES, CHANGE TO 4
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 4; i++)
 	{
 		glGenVertexArrays(1, &VAO[i]);
 		glGenBuffers(1, &VBO[i]);
@@ -283,6 +276,10 @@ int main()
 	interpolateX();
 	//-----------------------------------------------------------------------------------------------
 
+	//Create vertices for step 5---------------------------------------------------------------------
+	interpolateZ();
+	//-----------------------------------------------------------------------------------------------
+
 	cout << "image processing complete" << endl;
 	//--------------------------------------------------------------------------------------
 
@@ -292,6 +289,8 @@ int main()
 	Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO, 1);
 	//vertices for step 4
 	Rebuffer(interpolatedX_vertices, EBO_interpolatedX_indices, VAO, VBO, EBO,2);
+	//vertices for step 5
+	Rebuffer(interpolatedZ_vertices, EBO_interpolatedZ_indices, VAO, VBO, EBO, 3);
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
@@ -311,7 +310,7 @@ int main()
 		glClearColor(0.0f, 0.1f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 1000.0f);
+		projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 model_matrix;
 
@@ -336,9 +335,15 @@ int main()
 		}
 		if (state4) {
 			glBindVertexArray(VAO[2]);
-			//glDrawArrays(objRenderMode, 0, interpolatedX_vertices.size());
 			cout << interpolatedX_vertices.size() << endl;
 			glDrawElements(objRenderMode, EBO_interpolatedX_indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+		if (state5) {
+			glBindVertexArray(VAO[3]);
+			cout << interpolatedX_vertices.size() << endl;
+			//glDrawArrays(objRenderMode, 0, interpolatedZ_vertices.size());
+			glDrawElements(objRenderMode, EBO_interpolatedZ_indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
 
@@ -375,16 +380,25 @@ void processInput(GLFWwindow *window)
 		state2 = true;
 		state3 = false;
 		state4 = false;
+		state5 = false;
 	}
 	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS){
 		state2 = false;
 		state3 = true;
 		state4 = false;
+		state5 = false;
 	}
 	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
 		state2 = false;
 		state3 = false;
 		state4 = true;
+		state5 = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+		state2 = false;
+		state3 = false;
+		state4 = false;
+		state5 = true;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
@@ -403,14 +417,30 @@ void processInput(GLFWwindow *window)
 		cout << "please enter desired step size" << endl;
 		cin >> step;
 		EBO_indices.clear();
+		EBO_interpolatedX_indices.clear();
+		EBO_interpolatedZ_indices.clear();
+
 		index3d.clear();
+		interpolatedX_index3d.clear();
+		interpolatedZ_index3d.clear();
+
 		skipped_vertices.clear();
+		interpolatedX_vertices.clear();
+		interpolatedZ_vertices.clear();
+
 		skipped_vertices3d.clear();
+		interpolatedX_vertices3d.clear();
+		interpolatedZ_vertices3d.clear();
 
 		skipped_vertices3d = calcStepVertices(all_vertices3d.size(), all_vertices3d.front().size(), index3d);
 		skipped_vertices = flatten(skipped_vertices3d);
 		EBO_indices = createEBO(index3d);
 		Rebuffer(skipped_vertices, EBO_indices, VAO, VBO, EBO, 1);
+
+		interpolateX();
+		interpolateZ();
+		Rebuffer(interpolatedX_vertices, EBO_interpolatedX_indices, VAO, VBO, EBO, 2);
+		Rebuffer(interpolatedZ_vertices, EBO_interpolatedZ_indices, VAO, VBO, EBO, 3);
 	}
 }
 
@@ -421,6 +451,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
+	projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 1000.0f);
 }
 
 
@@ -460,6 +491,7 @@ vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, ve
 	vector<vector<glm::vec3>> skipped_vertices3d;
 	for (int j = 0; j < image_height; j++)
 	{
+		if (step == 0) { step = 1; }
 		if (j % step == 0) {
 			vector<glm::vec3> temp_skip;
 			vector<int> temp_index;
@@ -545,7 +577,7 @@ void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO[],
 	glEnableVertexAttribArray(0);
 
 	glBindVertexArray(0);
-	cout << "Elements buffered" << endl;
+	cout << "Elements buffered "<< i << endl;
 }
 
 ///calculate every point  to be interpolated on the x axis
@@ -585,6 +617,49 @@ void interpolateX()
 	interpolatedX_vertices = flatten(interpolatedX_vertices3d);
 	EBO_interpolatedX_indices = createEBO(interpolatedX_index3d);
 	cout << "potate" << endl;
+}
+
+void interpolateZ()
+{
+	int counter = 0;
+	for (int i = 0; i < interpolatedX_vertices3d.front().size(); i++) {
+		vector<int> tempindices;
+		vector<glm::vec3> tempvertices;
+		for (int j = 0; j < interpolatedX_vertices3d.size() - 3; j++) {
+
+			interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(j).at(i));
+			tempvertices.push_back(interpolatedX_vertices3d.at(j).at(i));
+			tempindices.push_back(counter);
+			counter++;
+			for (float t = u; t < 1; t += u) {
+				glm::vec3 intPointZ = catmullRom(interpolatedX_vertices3d.at(j).at(i), interpolatedX_vertices3d.at(j + 1).at(i), interpolatedX_vertices3d.at(j + 2).at(i), interpolatedX_vertices3d.at(j + 3).at(i), t);
+				interpolatedZ_vertices.push_back(intPointZ);
+				tempvertices.push_back(intPointZ);
+				tempindices.push_back(counter);
+				counter++;
+			}
+		}
+
+		interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 1).at(i));
+		tempvertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 1).at(i));
+		tempindices.push_back(counter);
+		counter++;
+
+		interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 2).at(i));
+		tempvertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 2).at(i));
+		tempindices.push_back(counter);
+		counter++;
+
+		interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 3).at(i));
+		tempvertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 3).at(i));
+		tempindices.push_back(counter);
+		counter++;
+
+		interpolatedZ_vertices3d.push_back(tempvertices);
+		interpolatedZ_index3d.push_back(tempindices);
+	}
+	EBO_interpolatedZ_indices = createEBO(interpolatedZ_index3d);
+	cout << "tomato" << endl;
 }
 
 glm::vec3 catmullRom(glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4, float u) {
