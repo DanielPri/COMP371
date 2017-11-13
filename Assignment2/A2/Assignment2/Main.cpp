@@ -19,6 +19,9 @@
 using namespace std;
 using namespace cimg_library;
 
+bool sortOnX(glm::vec3 a, glm::vec3 b) { return a.x < b.x; };
+bool sortOnZ(glm::vec3 a, glm::vec3 b) { return a.z < b.z; };
+
 std::ostream& operator<<(std::ostream& stream, const glm::mat4& matrix);
 std::ostream& operator<<(std::ostream& stream, const glm::mat4x3& matrix);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -31,6 +34,7 @@ vector<vector<glm::vec3>> calcStepVertices(int image_height, int image_width, ve
 vector<vector<int>> calcIndex3d(int image_height, int image_width);
 vector<glm::vec3> flatten(vector<vector<glm::vec3>> vector3d);
 vector <int> createEBO(vector<vector<int>> index3d);
+//vector <int> createZEBO(vector<vector<int>> index3d);
 void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO[], GLuint VBO[], GLuint EBO[], int i );
 glm::vec3 catmullRom(glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4, float u);
 // Window dimensions
@@ -550,19 +554,41 @@ vector <int> createEBO(vector<vector<int>> index3d)
 		for (int j = 0; j < index3d.front().size() - 1; j++)
 		{
 			//triangle 1
-			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
-			EBO_indices.emplace_back(index3d.at(i).at(j));
 			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
+			EBO_indices.emplace_back(index3d.at(i).at(j));
+			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
 
 			//triangle 2
 			EBO_indices.emplace_back(index3d.at(i).at(j + 1));
-			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
 			EBO_indices.emplace_back(index3d.at(i + 1).at(j + 1));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j));
 		}
 	}
 	return EBO_indices;
 }
 
+/*
+vector <int> createZEBO(vector<vector<int>> index3d)
+{
+	vector<int> EBO_indices;
+	for (int i = 0; i < index3d.front().size() - 1; i++)
+	{
+		for (int j = 0; j < index3d.size() - 1; j++)
+		{
+			//triangle 1
+			EBO_indices.emplace_back(index3d.at(i).at(j));
+			EBO_indices.emplace_back(index3d.at(i).at(j+1));
+			EBO_indices.emplace_back(index3d.at(i+1).at(j));
+
+			//triangle 2
+			EBO_indices.emplace_back(index3d.at(i+1).at(j));
+			EBO_indices.emplace_back(index3d.at(i ).at(j+1));
+			EBO_indices.emplace_back(index3d.at(i + 1).at(j + 1));
+		}
+	}
+	return EBO_indices;
+}
+*/
 void Rebuffer(vector<glm::vec3> vertices, vector<int> EBO_indices, GLuint VAO[], GLuint VBO[], GLuint EBO[], int i)
 {
 	glBindVertexArray(VAO[i]);
@@ -610,6 +636,7 @@ void interpolateX()
 				counter ++;
 			}
 		}
+		sort(tempinter.begin(), tempinter.end(), sortOnX);
 		interpolatedX_vertices3d.emplace_back(std::move(tempinter));
 		interpolatedX_index3d.emplace_back(tempindex);
 	}
@@ -627,37 +654,35 @@ void interpolateZ()
 		vector<glm::vec3> tempvertices;
 		for (int j = 0; j < interpolatedX_vertices3d.size() - 3; j++) {
 
-			interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(j).at(i));
 			tempvertices.push_back(interpolatedX_vertices3d.at(j).at(i));
 			tempindices.push_back(counter);
 			counter++;
-			for (float t = u; t < 1; t += u) {
-				glm::vec3 intPointZ = catmullRom(interpolatedX_vertices3d.at(j).at(i), interpolatedX_vertices3d.at(j + 1).at(i), interpolatedX_vertices3d.at(j + 2).at(i), interpolatedX_vertices3d.at(j + 3).at(i), t);
-				interpolatedZ_vertices.push_back(intPointZ);
+			for (float k = u; k < 1; k += u) {
+				glm::vec3 intPointZ = catmullRom(interpolatedX_vertices3d.at(j).at(i), interpolatedX_vertices3d.at(j + 1).at(i), interpolatedX_vertices3d.at(j + 2).at(i), interpolatedX_vertices3d.at(j + 3).at(i), k);
 				tempvertices.push_back(intPointZ);
 				tempindices.push_back(counter);
 				counter++;
 			}
 		}
 
-		interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 1).at(i));
 		tempvertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 1).at(i));
 		tempindices.push_back(counter);
 		counter++;
 
-		interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 2).at(i));
 		tempvertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 2).at(i));
 		tempindices.push_back(counter);
 		counter++;
 
-		interpolatedZ_vertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 3).at(i));
 		tempvertices.push_back(interpolatedX_vertices3d.at(interpolatedX_vertices3d.size() - 3).at(i));
 		tempindices.push_back(counter);
 		counter++;
 
+		sort(tempvertices.begin(), tempvertices.end(), sortOnZ);
 		interpolatedZ_vertices3d.push_back(tempvertices);
 		interpolatedZ_index3d.push_back(tempindices);
 	}
+
+	interpolatedZ_vertices = flatten(interpolatedZ_vertices3d);
 	EBO_interpolatedZ_indices = createEBO(interpolatedZ_index3d);
 	cout << "tomato" << endl;
 }
